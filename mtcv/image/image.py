@@ -1,6 +1,5 @@
 import cv2
 
-
 def resize(img, ratio=0.5, dsize=None):
     """
     Resize single image to desired size.
