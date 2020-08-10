@@ -3,7 +3,7 @@ import os, sys
 from PIL import Image, ImageFile, ImageFilter, ImageEnhance
 from blend.AffineTrans import Affine
 from blend.PerspectiveTrans import Perspective
-from blend.img_blend import paste,edge_blur,poisson_blend,channel_blend,naive_paste
+from blend.img_blend import channel_blend,edge_blur
 import cv2
 import matplotlib.pyplot as plt
 import argparse
@@ -25,6 +25,7 @@ def args_arguments():
     parser.add_argument('--isaddNoise', type=bool, default=False)
     parser.add_argument('--isaddPerspective', type=bool, default=True)
     parser.add_argument('--isaddAffine', type=bool, default=True)
+    parser.add_argument('--isBlurEdge',type=bool,default=True)
     parser.add_argument('--locations', default=[None],
                         help=" the param used to specify the logo locations blended in the source image."
                              "If list(int),four paris of corner coordinates are specified. precise loc specified if list(list)"
@@ -58,6 +59,7 @@ class addTransformation:
         self.isaddNoise = args.isaddNoise
         self.isaddAffine = args.isaddAffine
         self.isaddPerspective = args.isaddPerspective
+        self.isBlurEdge=args.isBlurEdge
         self.locations = args.locations
         self.logoSampleNumber = len(args.locations)
         self.pathCheck()
@@ -138,6 +140,7 @@ class addTransformation:
                isaddNoise,
                isaddPerspective,
                isaddAffine,
+               isBlurEdge,
                iters):
         """
         perform transformation on given logo image. Including monophonic processing, perspective and affine.
@@ -211,9 +214,8 @@ class addTransformation:
             pngImg, point_list = Perspective(pngImg, point_list)
         if isaddAffine:
             pngImg, point_list = Affine(pngImg, point_list)
-
-        # debug:
-        pngImg, point_list =edge_blur(pngImg,point_list)
+        if isBlurEdge:
+            pngImg, point_list =edge_blur(pngImg,point_list)
 
         return pngImg, info, point_list
 
@@ -295,16 +297,16 @@ class addTransformation:
 
             # blend image
             pixPng = np.array(pngImgs[i])
-            # pixSrc= paste(pixSrc,pixPng,srcH,srcW,x,y)
-            naive_paste(pixSrc,pixPng,srcH,srcW,x,y)
-            # pixSrc= poisson_blend(pixSrc,pixPng,srcH,srcW,x,y)
-            # pixSrc= channel_blend(pixSrc,pixPng,srcH,srcW,x,y)
+            pixSrc=channel_blend(pixSrc,pixPng,srcH,srcW,x,y)
+
+            # write txt content.
+            txt_content = f' {logo_names[i]} 0 0 {coordinate[0]} {coordinate[1]} {coordinate[2]} {coordinate[3]}'
 
 
 
         # debug: show logo box.
-        for coord in logoCoord:
-              pixSrc =cv2.rectangle(pixSrc,(coord[0],coord[1]),(coord[2],coord[3]),(0,255,0),2)
+        # for coord in logoCoord:
+        #       pixSrc =cv2.rectangle(pixSrc,(coord[0],coord[1]),(coord[2],coord[3]),(0,255,0),2)
 
         # write image and txt file.
         srcImg = Image.fromarray(pixSrc)
@@ -326,7 +328,7 @@ class addTransformation:
         random.shuffle(files)
 
         for n, file in enumerate(files):
-            if n == 30: break
+            if n == 100: break
             try:
                 srcImg = Image.open(file)
             except:
@@ -344,7 +346,7 @@ class addTransformation:
                 informations = []
                 for (logoImg, logoName) in zip(logoImgs, logofiles):
                     logoImgAug, info, point_list = self.ImgOPS(srcImg, logoImg, self.isResize, self.isaddNoise,
-                                                               self.isaddPerspective, self.isaddAffine, n)
+                                                               self.isaddPerspective, self.isaddAffine,self.isBlurEdge, n)
                     logoImgAugs.append(logoImgAug)
                     point_lists.append(point_list)
                     info.append(logoName)

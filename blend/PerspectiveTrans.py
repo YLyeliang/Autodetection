@@ -61,10 +61,10 @@ def Perspective(src,point_list=None):
         img = Image.fromarray(cv2.cvtColor(dst,cv2.COLOR_BGRA2RGBA))
 
         # debug:
-        import matplotlib.pyplot as plt
-        plt.figure()
-        plt.imshow(img)
-        plt.show()
+        # import matplotlib.pyplot as plt
+        # plt.figure()
+        # plt.imshow(img)
+        # plt.show()
 
         return img,np.int32(dst_points).tolist()
     else:

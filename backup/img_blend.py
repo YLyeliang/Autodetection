@@ -24,9 +24,6 @@ blend_mode={0:"naive",1:"weight",2:"poisson",3:"multiply"}
 def edge_blur(src,point_list=None):
     """
     Blurring the edge of logo image.
-    1. blur the whole image.
-    2. create a mask covering the actual logo, and erode the mask as non-blur part of image.
-    3. replace the blurred image at mask part with source logo image.
     Args:
         src:
         point_list: four paris of coordinates of actual logos.
@@ -51,6 +48,7 @@ def edge_blur(src,point_list=None):
     return img,point_list
 
 
+
 def edge_blur_backup(src,point_list=None):
 
     src = cv2.cvtColor(np.asarray(src), cv2.COLOR_RGBA2BGRA)
@@ -72,7 +70,7 @@ def edge_blur_backup(src,point_list=None):
 
     return img,point_list
 
-def weight_paste(pixSrc,pixPng,src_id,logo_id):
+def weight_paste(pixSrc,pixPng,srcH,srcW,x,y):
     """
     a weight blend method, that corresponding parts in logo and source will be blend
     according to their alpha value.
@@ -87,14 +85,25 @@ def weight_paste(pixSrc,pixPng,src_id,logo_id):
     Returns:
 
     """
+    # 1.find all indices satisfying conditions, and replace the value of indices in source image with logo image.
+    # note: from pillow to numpy, (w,h) has converted to (h,w).
+    # pixSrc= cv2.cvtColor(pixSrc, cv2.COLOR_RGBA2RGB)
+    index = np.where(pixPng[:, :, 3] > 15)
+    y_id = index[0] + y - 1
+    x_id = index[1] + x - 1
+    # ensure the exceeding part remained in boundary.
+    y_id = np.where(y_id >= srcH, srcH - 1, y_id)
+    x_id = np.where(x_id >= srcW, srcW - 1, x_id)
+    id = (y_id, x_id)
+
     weight = pixPng[:, :, 3] / 255
     weight=weight[:,:,np.newaxis]
-    alpha=weight[logo_id]
+    alpha=weight[index]
     beta=1-alpha
-    pixSrc[src_id]=pixSrc[src_id]*beta +pixPng[logo_id]*alpha
-    return pixSrc
+    pixSrc[id]=pixSrc[id]*beta +pixPng[index]*alpha
+    return cv2.cvtColor(pixSrc,cv2.COLOR_RGBA2RGB)
 
-def naive_paste(pixSrc,pixPng,src_id,logo_id):
+def naive_paste(pixSrc,pixPng,srcH,srcW,x,y):
     """
     a naive blend method, that simply paste the logo onto the source image.
     The logo image after transformed
@@ -108,11 +117,24 @@ def naive_paste(pixSrc,pixPng,src_id,logo_id):
     Returns:
 
     """
-    pixSrc[src_id] = pixPng[logo_id]
-    return pixSrc
+    # 1.find all indices satisfying conditions, and replace the value of indices in source image with logo image.
+    # note: from pillow to numpy, (w,h) has converted to (h,w).
+    index = np.where(pixPng[:, :, 3] > 15)
+    y_id = index[0] + y - 1
+    x_id = index[1] + x - 1
+
+    # 2.ensure the exceeding part remained in boundary.
+    y_id = np.where(y_id >= srcH, srcH - 1, y_id)
+    x_id = np.where(x_id >= srcW, srcW - 1, x_id)
+    id = (y_id, x_id)
+
+    # 3. pasate the logo image onto the source.
+    pixSrc[id] = pixPng[index]
 
 
-def poisson_blend(pixSrc,pixPng,src_id,logo_id, x,y):
+def poisson_blend(pixSrc,pixPng,srcH,srcW,x,y):
+
+    index = np.where(pixPng[:, :, 3] > 15)
 
     height,width=pixPng.shape[:2]
     mask=np.zeros(pixPng.shape[:2],dtype=np.uint8)
@@ -120,13 +142,13 @@ def poisson_blend(pixSrc,pixPng,src_id,logo_id, x,y):
     p_x=x+ width//2-1
     p_y=y+height//2-1
 
-    mask[logo_id]=255
+    mask[index]=255
     pixSrc=cv2.cvtColor(pixSrc,cv2.COLOR_RGBA2BGR)
     pixPng=cv2.cvtColor(pixPng,cv2.COLOR_RGBA2BGR)
     pixPng=histEqualize(pixPng,space='rgb',clipLimit=40)
     mixed=cv2.seamlessClone(pixPng,pixSrc,mask,(p_x,p_y),cv2.NORMAL_CLONE)
 
-    return cv2.cvtColor(mixed,cv2.COLOR_BGR2RGBA)
+    return cv2.cvtColor(mixed,cv2.COLOR_BGR2RGB)
 
 def multiply(src,logo,src_id,logo_id):
     r,g,b = src[:,:,0],src[:,:,1],src[:,:,2]
@@ -145,7 +167,7 @@ def multiply(src,logo,src_id,logo_id):
     return src
 
 
-def channel_blend(pixSrc,pixPng,srcH,srcW,x,y,mode ='weight'):
+def channel_blend(pixSrc,pixPng,srcH,srcW,x,y,mode ='edge_blur'):
     """
     Blend the source image with logo image at corresponding locations.
     Args:
@@ -159,7 +181,7 @@ def channel_blend(pixSrc,pixPng,srcH,srcW,x,y,mode ='weight'):
     Returns:
 
     """
-    modes= [item for i,item in blend_mode.items()]
+    modes= [item for item in blend_mode.items()]
     # 1.find all indices satisfying conditions, and replace the value of indices in source image with logo image.
     # note: from pillow to numpy, (w,h) has converted to (h,w).
     index = np.where(pixPng[:, :, 3] > 15)
@@ -171,14 +193,9 @@ def channel_blend(pixSrc,pixPng,srcH,srcW,x,y,mode ='weight'):
     x_id = np.where(x_id >= srcW, srcW - 1, x_id)
     id = (y_id, x_id)
 
-    if mode not in modes: raise NotImplemented("only {0:'naive',1:'weight',2:'poisson',3:'multiply'} are supported.")
+    if mode not in modes: raise NotImplemented("only {0:'naive',1:'edge_blur',2:'poisson',3:'multiply'} are supported.")
     if mode =='weight':
-        pixSrc=weight_paste(pixSrc,pixPng,id,index)
-    elif mode =='naive':
-        pixSrc=naive_paste(pixSrc,pixPng,id,index)
-    elif mode=='poisson':
-        pixSrc=poisson_blend(pixSrc,pixPng,id,index,x,y)
-    elif mode=='mulitply':
-        pixSrc=multiply(pixSrc,pixPng,id,index)
 
+    pixSrc= multiply(pixSrc,pixPng,id,index)
+    # pixSrc[id,:3]*=pixPng[index,:3]/255
     return cv2.cvtColor(pixSrc,cv2.COLOR_RGBA2RGB)
