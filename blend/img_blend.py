@@ -35,19 +35,92 @@ def edge_blur(src,point_list=None):
     """
 
     src = cv2.cvtColor(np.asarray(src), cv2.COLOR_RGBA2BGRA)
-    src_blur = cv2.GaussianBlur(src,(13,13),11)
-
-    mask=np.zeros(src.shape[:2],dtype=np.float32)
+    src_cp = src[:,:,:3]
+    src_blur=cv2.GaussianBlur(src_cp,(13,13),0)
+    # src_blur = cv2.GaussianBlur(src,(13,13),0)
 
     idx=np.where(src[:,:,3]>15)
+
+    mask=np.zeros(src.shape[:2],dtype=np.uint8)
     mask[idx]=255
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (21, 21))
     dil=cv2.erode(mask,kernel)
-    mask_id=np.where(dil>0)
-    src_blur[mask_id]=src[mask_id]
 
-    img = Image.fromarray(cv2.cvtColor(src_blur, cv2.COLOR_BGRA2RGBA))
+    mask_id=np.where(dil>0)
+    src_blur[mask_id]=src_cp[mask_id]
+    src[:,:,:3]=src_blur
+
+    img = Image.fromarray(cv2.cvtColor(src, cv2.COLOR_BGRA2RGBA))
+    debug=1
+    return img,point_list
+
+def edge_virtual(src,point_list=None):
+    """
+    virutal the edge of image. Simply blur the alpha channels and keep actual logo region.
+    1. create a alpha channel and copy blur the alpha copy.
+    2. create a mask covering the actual logo and erode the mask.
+    3. replacing the parts in blurred alpha with alpha according the mask region.
+    Args:
+        src:
+        point_list:
+
+    Returns:
+
+    """
+    src = cv2.cvtColor(np.asarray(src), cv2.COLOR_RGBA2BGRA)
+    alpha = src[:,:,3]
+    alpha_blur = cv2.GaussianBlur(alpha,(7,7),0)
+
+    idx=np.where(alpha>15)
+    mask = np.zeros(src.shape[:2], dtype=np.uint8)
+    mask[idx]=255
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (13, 13))
+    dil=cv2.erode(mask,kernel)
+    mask_id=np.where(dil>0)
+
+    alpha_blur[mask_id]=alpha[mask_id]
+    src[:,:,3]=alpha_blur
+    img = Image.fromarray(cv2.cvtColor(src, cv2.COLOR_BGRA2RGBA))
+    return img,point_list
+
+def edge_virtualv2(src,point_list=None,degree=3):
+    """
+    virutal the edge of image. Iteratively reduce the alpha value of image from outside to inside.
+        src:
+        point_list:
+
+    Returns:
+
+    """
+    src = cv2.cvtColor(np.asarray(src), cv2.COLOR_RGBA2BGRA)
+
+    # create initial mask covering the actual image.
+    alpha=src[:,:,3]
+    alpha[0,:],alpha[-1,:],alpha[:,0],alpha[:,-1]=0,0,0,0
+    idx=np.where(src[:,:,3]>15)
+    mask = np.zeros(src.shape[:2], dtype=np.uint8)
+    mask[idx]=255
+    mask[0,:]=0
+    mask[-1,:]=0
+    mask[:,0]=0
+    mask[:,-1]=0
+
+
+    # iteratively erode the mask and assigned the removed region to division factor in descend.
+
+    factors=np.linspace(2,1,5)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    for factor in factors:
+
+        dil=cv2.erode(mask,kernel)
+        diff1=mask-dil
+        mask=dil
+        removed_loc=np.where(diff1>0)
+        alpha[removed_loc]=alpha[removed_loc]//factor
+
+    src[:,:,3]=alpha
+    img = Image.fromarray(cv2.cvtColor(src, cv2.COLOR_BGRA2RGBA))
     return img,point_list
 
 
@@ -178,7 +251,7 @@ def channel_blend(pixSrc,pixPng,srcH,srcW,x,y,mode ='weight'):
         pixSrc=naive_paste(pixSrc,pixPng,id,index)
     elif mode=='poisson':
         pixSrc=poisson_blend(pixSrc,pixPng,id,index,x,y)
-    elif mode=='mulitply':
+    elif mode=='multiply':
         pixSrc=multiply(pixSrc,pixPng,id,index)
 
     return cv2.cvtColor(pixSrc,cv2.COLOR_RGBA2RGB)

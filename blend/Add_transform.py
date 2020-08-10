@@ -3,7 +3,7 @@ import os, sys
 from PIL import Image, ImageFile, ImageFilter, ImageEnhance
 from blend.AffineTrans import Affine
 from blend.PerspectiveTrans import Perspective
-from blend.img_blend import channel_blend,edge_blur
+from blend.img_blend import channel_blend,edge_blur,edge_virtual,edge_virtualv2
 import cv2
 import matplotlib.pyplot as plt
 import argparse
@@ -175,18 +175,18 @@ class addTransformation:
             if scale > 1:
                 scale1 = 1
                 if 1 < scale < 2:
-                    scale1 = random.uniform(0.4, 1)
+                    scale1 = random.uniform(0.2, 0.8)
                 elif 2 <= scale < 4:
-                    scale1 = random.uniform(0.4, 1.2)
+                    scale1 = random.uniform(0.3, 0.9)
                 elif 4 <= scale < 6:
-                    scale1 = random.uniform(0.5, 1.2)
+                    scale1 = random.uniform(0.4, 1)
                 elif 6 <= scale < 10:
-                    scale1 = random.uniform(0.8, 1.68)
+                    scale1 = random.uniform(0.5, 1.1)
                 elif 10 <= scale:
-                    scale1 = random.uniform(0.8, 3)
+                    scale1 = random.uniform(0.6, 3)
                 pngImg = pngImg.resize((int(scale1 * width), int(scale1 * height)))
             else:
-                scale1 = random.uniform(0.2, 0.5)
+                scale1 = random.uniform(0.1, 0.4)
                 leng_img = srcW if scale_w < scale_H else srcH
                 pngImg = pngImg.resize((int(scale1 * leng_img), int(scale1 * leng_img)))
 
@@ -215,7 +215,8 @@ class addTransformation:
         if isaddAffine:
             pngImg, point_list = Affine(pngImg, point_list)
         if isBlurEdge:
-            pngImg, point_list =edge_blur(pngImg,point_list)
+            # pngImg, point_list =edge_blur(pngImg,point_list)
+            pngImg, point_list = edge_virtualv2(pngImg, point_list)
 
         return pngImg, info, point_list
 
@@ -297,7 +298,7 @@ class addTransformation:
 
             # blend image
             pixPng = np.array(pngImgs[i])
-            pixSrc=channel_blend(pixSrc,pixPng,srcH,srcW,x,y)
+            pixSrc=channel_blend(pixSrc,pixPng,srcH,srcW,x,y,mode='weight')
 
             # write txt content.
             txt_content = f' {logo_names[i]} 0 0 {coordinate[0]} {coordinate[1]} {coordinate[2]} {coordinate[3]}'
