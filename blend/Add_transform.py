@@ -3,7 +3,7 @@ import os, sys
 from PIL import Image, ImageFile, ImageFilter, ImageEnhance
 from blend.AffineTrans import Affine
 from blend.PerspectiveTrans import Perspective
-from blend.img_blend import channel_blend,edge_blur,edge_virtual,edge_virtualv2
+from blend.img_blend import channel_blend, edge_blur, edge_virtual, edge_virtualv2
 import cv2
 import matplotlib.pyplot as plt
 import argparse
@@ -25,7 +25,7 @@ def args_arguments():
     parser.add_argument('--isaddNoise', type=bool, default=False)
     parser.add_argument('--isaddPerspective', type=bool, default=True)
     parser.add_argument('--isaddAffine', type=bool, default=True)
-    parser.add_argument('--isBlurEdge',type=bool,default=True)
+    parser.add_argument('--isVirtualEdge', type=bool, default=True)
     parser.add_argument('--locations', default=[None],
                         help=" the param used to specify the logo locations blended in the source image."
                              "If list(int),four paris of corner coordinates are specified. precise loc specified if list(list)"
@@ -59,7 +59,7 @@ class addTransformation:
         self.isaddNoise = args.isaddNoise
         self.isaddAffine = args.isaddAffine
         self.isaddPerspective = args.isaddPerspective
-        self.isBlurEdge=args.isBlurEdge
+        self.isVirtualEdge = args.isVirtualEdge
         self.locations = args.locations
         self.logoSampleNumber = len(args.locations)
         self.pathCheck()
@@ -109,7 +109,7 @@ class addTransformation:
             x, y = location
 
         else:
-            x, y = random.randint(0, max(srcW - widthTrans,0)), random.randint(0, max(0,srcH - heightTrans))
+            x, y = random.randint(0, max(srcW - widthTrans, 0)), random.randint(0, max(0, srcH - heightTrans))
         return x, y
 
     def setPath(self, informations):
@@ -123,10 +123,10 @@ class addTransformation:
         """
         logo_names = [info[2][:-4] for info in informations]
         outImgName = str(informations[0][0]) + "_" + "_".join(logo_names) + "_{}".format(
-            datetime.datetime.now().strftime("%Y%m%d"))
+            datetime.datetime.now().strftime("%Y%m%H%d"))
         outTxtpath = os.path.join(self.outTxtDir, outImgName + '.txt')
         # debug: test
-        output = os.path.join(self.outputDir,"{}".format(datetime.datetime.now().strftime("%Y%m%d%M")))
+        output = os.path.join(self.outputDir, "{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M")))
         if not os.path.exists(output): os.mkdir(output)
         outImgpath = os.path.join(output, outImgName + '.jpg')
         # outImgpath = os.path.join(self.outputDir, outImgName + '.jpg')
@@ -140,7 +140,7 @@ class addTransformation:
                isaddNoise,
                isaddPerspective,
                isaddAffine,
-               isBlurEdge,
+               isVirtualEdge,
                iters):
         """
         perform transformation on given logo image. Including monophonic processing, perspective and affine.
@@ -214,7 +214,7 @@ class addTransformation:
             pngImg, point_list = Perspective(pngImg, point_list)
         if isaddAffine:
             pngImg, point_list = Affine(pngImg, point_list)
-        if isBlurEdge:
+        if isVirtualEdge:
             # pngImg, point_list =edge_blur(pngImg,point_list)
             pngImg, point_list = edge_virtualv2(pngImg, point_list)
 
@@ -298,12 +298,10 @@ class addTransformation:
 
             # blend image
             pixPng = np.array(pngImgs[i])
-            pixSrc=channel_blend(pixSrc,pixPng,srcH,srcW,x,y,mode='weight')
+            pixSrc = channel_blend(pixSrc, pixPng, srcH, srcW, x, y, mode='weight')
 
             # write txt content.
             txt_content = f' {logo_names[i]} 0 0 {coordinate[0]} {coordinate[1]} {coordinate[2]} {coordinate[3]}'
-
-
 
         # debug: show logo box.
         # for coord in logoCoord:
@@ -347,7 +345,8 @@ class addTransformation:
                 informations = []
                 for (logoImg, logoName) in zip(logoImgs, logofiles):
                     logoImgAug, info, point_list = self.ImgOPS(srcImg, logoImg, self.isResize, self.isaddNoise,
-                                                               self.isaddPerspective, self.isaddAffine,self.isBlurEdge, n)
+                                                               self.isaddPerspective, self.isaddAffine, self.isVirtualEdge,
+                                                               n)
                     logoImgAugs.append(logoImgAug)
                     point_lists.append(point_list)
                     info.append(logoName)

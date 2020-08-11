@@ -6,19 +6,6 @@ from PIL import Image
 from mtcv.misc import histEqualize
 from skimage.transform import PiecewiseAffineTransform,warp
 
-# test_path="/users/fiberhome/Downloads/source_data/png"
-
-def get_file_list(path):
-    file_list = []
-    for (root, dirs, files) in os.walk(path):
-        if files:
-            for i in files:
-                file_path = os.path.join(root, i)
-                file_list.append(file_path)
-    return file_list
-
-# png_list=get_file_list(test_path)
-
 blend_mode={0:"naive",1:"weight",2:"poisson",3:"multiply"}
 
 def edge_blur(src,point_list=None):
@@ -94,6 +81,13 @@ def edge_virtualv2(src,point_list=None,degree=3):
 
     """
     src = cv2.cvtColor(np.asarray(src), cv2.COLOR_RGBA2BGRA)
+    xmax = np.amax(point_list, axis=0)[0]
+    ymax = np.amax(point_list, axis=0)[1]
+    xmin = np.amin(point_list, axis=0)[0]
+    ymin = np.amin(point_list, axis=0)[1]
+    widthTrans = xmax - xmin
+    heightTrans = ymax - ymin
+    side=min(widthTrans,heightTrans)
 
     # create initial mask covering the actual image.
     alpha=src[:,:,3]
@@ -101,15 +95,12 @@ def edge_virtualv2(src,point_list=None,degree=3):
     idx=np.where(src[:,:,3]>15)
     mask = np.zeros(src.shape[:2], dtype=np.uint8)
     mask[idx]=255
-    mask[0,:]=0
-    mask[-1,:]=0
-    mask[:,0]=0
-    mask[:,-1]=0
-
-
+    mask[0,:],mask[-1,:],mask[:,0],mask[:,-1]=0,0,0,0
     # iteratively erode the mask and assigned the removed region to division factor in descend.
-
-    factors=np.linspace(2,1,5)
+    if side <100:
+        factors=np.linspace(1.5,1,5)
+    else:
+        factors=np.linspace(2,1,10)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     for factor in factors:
 
@@ -244,7 +235,7 @@ def channel_blend(pixSrc,pixPng,srcH,srcW,x,y,mode ='weight'):
     x_id = np.where(x_id >= srcW, srcW - 1, x_id)
     id = (y_id, x_id)
 
-    if mode not in modes: raise NotImplemented("only {0:'naive',1:'weight',2:'poisson',3:'multiply'} are supported.")
+    if mode not in modes: raise NotImplementedError("only {0:'naive',1:'weight',2:'poisson',3:'multiply'} are supported.")
     if mode =='weight':
         pixSrc=weight_paste(pixSrc,pixPng,id,index)
     elif mode =='naive':
