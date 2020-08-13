@@ -31,6 +31,7 @@ class PAFPN(FPN):
         # add extra bottom up pathway
         self.downsample_convs = nn.ModuleList()
         self.pafpn_convs = nn.ModuleList()
+        self.extra_convs_on_inputs=extra_convs_on_inputs
         for i in range(self.start_level + 1, self.backbone_end_level):
             d_conv = ConvModule(
                 out_channels,

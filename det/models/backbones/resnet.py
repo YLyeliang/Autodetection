@@ -1,24 +1,24 @@
 import logging
 import torch.nn as nn
-from mtcv.cnn import build_conv_layer,build_norm_layer
-from mtcv.cnn.weight_init import kaiming_init,constant_init
+from mtcv.cnn import build_conv_layer, build_norm_layer
+from mtcv.cnn.weight_init import kaiming_init, constant_init
+
 
 class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self,
                  inplanes,  # in channels
-                 planes,    # out channels
+                 planes,  # out channels
                  stride=1,
                  dilation=1,
                  downsample=None,
                  with_cp=False,
                  conv_cfg=None,
                  norm_cfg=dict(type="BN")):
-        super(BasicBlock,self).__init__()
+        super(BasicBlock, self).__init__()
         self.norm1_name, norm1 = build_norm_layer(norm_cfg, planes, postfix=1)
         self.norm2_name, norm2 = build_norm_layer(norm_cfg, planes, postfix=2)
-
 
         self.conv1 = build_conv_layer(conv_cfg, inplanes, planes, 3,  # 3*3 conv
                                       stride=stride, padding=dilation, dilation=dilation, bias=False)
@@ -149,6 +149,7 @@ class Bottleneck(nn.Module):
 
         return out
 
+
 def make_res_layer(block,
                    inplanes,
                    planes,
@@ -180,6 +181,7 @@ def make_res_layer(block,
                             norm_cfg=norm_cfg))
 
     return nn.Sequential(*layers)
+
 
 class ResNet(nn.Module):
     """ResNet backbone.
