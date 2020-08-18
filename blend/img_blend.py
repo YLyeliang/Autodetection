@@ -4,11 +4,12 @@ import matplotlib.pyplot as plt
 import os
 from PIL import Image
 from mtcv.misc import histEqualize
-from skimage.transform import PiecewiseAffineTransform,warp
+from skimage.transform import PiecewiseAffineTransform, warp
 
-blend_mode={0:"naive",1:"weight",2:"poisson",3:"multiply"}
+blend_mode = {0: "naive", 1: "weight", 2: "poisson", 3: "multiply"}
 
-def edge_blur(src,point_list=None):
+
+def edge_blur(src, point_list=None):
     """
     Blurring the edge of logo image.
     1. blur the whole image.
@@ -22,27 +23,28 @@ def edge_blur(src,point_list=None):
     """
 
     src = cv2.cvtColor(np.asarray(src), cv2.COLOR_RGBA2BGRA)
-    src_cp = src[:,:,:3]
-    src_blur=cv2.GaussianBlur(src_cp,(13,13),0)
+    src_cp = src[:, :, :3]
+    src_blur = cv2.GaussianBlur(src_cp, (13, 13), 0)
     # src_blur = cv2.GaussianBlur(src,(13,13),0)
 
-    idx=np.where(src[:,:,3]>15)
+    idx = np.where(src[:, :, 3] > 15)
 
-    mask=np.zeros(src.shape[:2],dtype=np.uint8)
-    mask[idx]=255
+    mask = np.zeros(src.shape[:2], dtype=np.uint8)
+    mask[idx] = 255
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (21, 21))
-    dil=cv2.erode(mask,kernel)
+    dil = cv2.erode(mask, kernel)
 
-    mask_id=np.where(dil>0)
-    src_blur[mask_id]=src_cp[mask_id]
-    src[:,:,:3]=src_blur
+    mask_id = np.where(dil > 0)
+    src_blur[mask_id] = src_cp[mask_id]
+    src[:, :, :3] = src_blur
 
     img = Image.fromarray(cv2.cvtColor(src, cv2.COLOR_BGRA2RGBA))
-    debug=1
-    return img,point_list
+    debug = 1
+    return img, point_list
 
-def edge_virtual(src,point_list=None):
+
+def edge_virtual(src, point_list=None):
     """
     virutal the edge of image. Simply blur the alpha channels and keep actual logo region.
     1. create a alpha channel and copy blur the alpha copy.
@@ -56,22 +58,23 @@ def edge_virtual(src,point_list=None):
 
     """
     src = cv2.cvtColor(np.asarray(src), cv2.COLOR_RGBA2BGRA)
-    alpha = src[:,:,3]
-    alpha_blur = cv2.GaussianBlur(alpha,(7,7),0)
+    alpha = src[:, :, 3]
+    alpha_blur = cv2.GaussianBlur(alpha, (7, 7), 0)
 
-    idx=np.where(alpha>15)
+    idx = np.where(alpha > 15)
     mask = np.zeros(src.shape[:2], dtype=np.uint8)
-    mask[idx]=255
+    mask[idx] = 255
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (13, 13))
-    dil=cv2.erode(mask,kernel)
-    mask_id=np.where(dil>0)
+    dil = cv2.erode(mask, kernel)
+    mask_id = np.where(dil > 0)
 
-    alpha_blur[mask_id]=alpha[mask_id]
-    src[:,:,3]=alpha_blur
+    alpha_blur[mask_id] = alpha[mask_id]
+    src[:, :, 3] = alpha_blur
     img = Image.fromarray(cv2.cvtColor(src, cv2.COLOR_BGRA2RGBA))
-    return img,point_list
+    return img, point_list
 
-def edge_virtualv2(src,point_list=None,degree=3):
+
+def edge_virtualv2(src, point_list=None, degree=3):
     """
     virutal the edge of image. Iteratively reduce the alpha value of image from outside to inside.
         src:
@@ -87,56 +90,55 @@ def edge_virtualv2(src,point_list=None,degree=3):
     ymin = np.amin(point_list, axis=0)[1]
     widthTrans = xmax - xmin
     heightTrans = ymax - ymin
-    side=min(widthTrans,heightTrans)
+    side = min(widthTrans, heightTrans)
 
     # create initial mask covering the actual image.
-    alpha=src[:,:,3]
-    alpha[0,:],alpha[-1,:],alpha[:,0],alpha[:,-1]=0,0,0,0
-    idx=np.where(src[:,:,3]>15)
+    alpha = src[:, :, 3]
+    alpha[0, :], alpha[-1, :], alpha[:, 0], alpha[:, -1] = 0, 0, 0, 0
+    idx = np.where(src[:, :, 3] > 15)
     mask = np.zeros(src.shape[:2], dtype=np.uint8)
-    mask[idx]=255
-    mask[0,:],mask[-1,:],mask[:,0],mask[:,-1]=0,0,0,0
+    mask[idx] = 255
+    mask[0, :], mask[-1, :], mask[:, 0], mask[:, -1] = 0, 0, 0, 0
     # iteratively erode the mask and assigned the removed region to division factor in descend.
-    if side <100:
-        factors=np.linspace(1.5,1,5)
+    if side < 100:
+        factors = np.linspace(1.5, 1, 5)
     else:
-        factors=np.linspace(2,1,10)
+        factors = np.linspace(2, 1, 10)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     for factor in factors:
+        dil = cv2.erode(mask, kernel)
+        diff1 = mask - dil
+        mask = dil
+        removed_loc = np.where(diff1 > 0)
+        alpha[removed_loc] = alpha[removed_loc] // factor
 
-        dil=cv2.erode(mask,kernel)
-        diff1=mask-dil
-        mask=dil
-        removed_loc=np.where(diff1>0)
-        alpha[removed_loc]=alpha[removed_loc]//factor
-
-    src[:,:,3]=alpha
+    src[:, :, 3] = alpha
     img = Image.fromarray(cv2.cvtColor(src, cv2.COLOR_BGRA2RGBA))
-    return img,point_list
+    return img, point_list
 
 
-def edge_blur_backup(src,point_list=None):
-
+def edge_blur_backup(src, point_list=None):
     src = cv2.cvtColor(np.asarray(src), cv2.COLOR_RGBA2BGRA)
-    mask=np.zeros(src.shape[:2],dtype=np.float32)
+    mask = np.zeros(src.shape[:2], dtype=np.float32)
 
-    idx=np.where(src[:,:,3]>15)
-    mask[idx]=255
+    idx = np.where(src[:, :, 3] > 15)
+    mask[idx] = 255
 
-    mask=cv2.GaussianBlur(mask,(21,21),11)
+    mask = cv2.GaussianBlur(mask, (21, 21), 11)
 
-    mask=mask/255.
-    mask=mask[:,:,np.newaxis]
+    mask = mask / 255.
+    mask = mask[:, :, np.newaxis]
 
-    src[:,:,:3]=src[:,:,:3]*mask
+    src[:, :, :3] = src[:, :, :3] * mask
     img = Image.fromarray(cv2.cvtColor(src, cv2.COLOR_BGRA2RGBA))
     plt.figure()
     plt.imshow(img)
     plt.show()
 
-    return img,point_list
+    return img, point_list
 
-def weight_paste(pixSrc,pixPng,src_id,logo_id):
+
+def weight_paste(pixSrc, pixPng, src_id, logo_id):
     """
     a weight blend method, that corresponding parts in logo and source will be blend
     according to their alpha value.
@@ -152,13 +154,14 @@ def weight_paste(pixSrc,pixPng,src_id,logo_id):
 
     """
     weight = pixPng[:, :, 3] / 255
-    weight=weight[:,:,np.newaxis]
-    alpha=weight[logo_id]
-    beta=1-alpha
-    pixSrc[src_id]=pixSrc[src_id]*beta +pixPng[logo_id]*alpha
+    weight = weight[:, :, np.newaxis]
+    alpha = weight[logo_id]
+    beta = 1 - alpha
+    pixSrc[src_id] = pixSrc[src_id] * beta + pixPng[logo_id] * alpha
     return pixSrc
 
-def naive_paste(pixSrc,pixPng,src_id,logo_id):
+
+def naive_paste(pixSrc, pixPng, src_id, logo_id):
     """
     a naive blend method, that simply paste the logo onto the source image.
     The logo image after transformed
@@ -176,30 +179,30 @@ def naive_paste(pixSrc,pixPng,src_id,logo_id):
     return pixSrc
 
 
-def poisson_blend(pixSrc,pixPng,src_id,logo_id, x,y):
+def poisson_blend(pixSrc, pixPng, src_id, logo_id, x, y):
+    height, width = pixPng.shape[:2]
+    mask = np.zeros(pixPng.shape[:2], dtype=np.uint8)
 
-    height,width=pixPng.shape[:2]
-    mask=np.zeros(pixPng.shape[:2],dtype=np.uint8)
+    p_x = x + width // 2 - 1
+    p_y = y + height // 2 - 1
 
-    p_x=x+ width//2-1
-    p_y=y+height//2-1
+    mask[logo_id] = 255
+    pixSrc = cv2.cvtColor(pixSrc, cv2.COLOR_RGBA2BGR)
+    pixPng = cv2.cvtColor(pixPng, cv2.COLOR_RGBA2BGR)
+    pixPng = histEqualize(pixPng, space='rgb', clipLimit=40)
+    mixed = cv2.seamlessClone(pixPng, pixSrc, mask, (p_x, p_y), cv2.NORMAL_CLONE)
 
-    mask[logo_id]=255
-    pixSrc=cv2.cvtColor(pixSrc,cv2.COLOR_RGBA2BGR)
-    pixPng=cv2.cvtColor(pixPng,cv2.COLOR_RGBA2BGR)
-    pixPng=histEqualize(pixPng,space='rgb',clipLimit=40)
-    mixed=cv2.seamlessClone(pixPng,pixSrc,mask,(p_x,p_y),cv2.NORMAL_CLONE)
+    return cv2.cvtColor(mixed, cv2.COLOR_BGR2RGBA)
 
-    return cv2.cvtColor(mixed,cv2.COLOR_BGR2RGBA)
 
-def multiply(src,logo,src_id,logo_id):
-    r,g,b = src[:,:,0],src[:,:,1],src[:,:,2]
-    l_r,l_g,l_b,l_a = logo[:,:,0],logo[:,:,1],logo[:,:,2],logo[:,:,3]
-    rgb=[r,g,b]
-    l_rgb=[l_r,l_g,l_b]
+def multiply(src, logo, src_id, logo_id):
+    r, g, b = src[:, :, 0], src[:, :, 1], src[:, :, 2]
+    l_r, l_g, l_b, l_a = logo[:, :, 0], logo[:, :, 1], logo[:, :, 2], logo[:, :, 3]
+    rgb = [r, g, b]
+    l_rgb = [l_r, l_g, l_b]
     for i in range(3):
-        l_rgb[i][logo_id]=l_rgb[i][logo_id]/255 *rgb[i][src_id]
-    lo=np.stack(l_rgb+[l_a],axis=2)
+        l_rgb[i][logo_id] = l_rgb[i][logo_id] / 255 * rgb[i][src_id]
+    lo = np.stack(l_rgb + [l_a], axis=2)
 
     weight = l_a / 255
     weight = weight[:, :, np.newaxis]
@@ -209,7 +212,7 @@ def multiply(src,logo,src_id,logo_id):
     return src
 
 
-def channel_blend(pixSrc,pixPng,srcH,srcW,x,y,mode ='weight'):
+def channel_blend(pixSrc, pixPng, srcH, srcW, x, y, mode='weight', color_match=False):
     """
     Blend the source image with logo image at corresponding locations.
     Args:
@@ -223,7 +226,7 @@ def channel_blend(pixSrc,pixPng,srcH,srcW,x,y,mode ='weight'):
     Returns:
 
     """
-    modes= [item for i,item in blend_mode.items()]
+    modes = [item for i, item in blend_mode.items()]
     # 1.find all indices satisfying conditions, and replace the value of indices in source image with logo image.
     # note: from pillow to numpy, (w,h) has converted to (h,w).
     index = np.where(pixPng[:, :, 3] > 15)
@@ -235,14 +238,28 @@ def channel_blend(pixSrc,pixPng,srcH,srcW,x,y,mode ='weight'):
     x_id = np.where(x_id >= srcW, srcW - 1, x_id)
     id = (y_id, x_id)
 
-    if mode not in modes: raise NotImplementedError("only {0:'naive',1:'weight',2:'poisson',3:'multiply'} are supported.")
-    if mode =='weight':
-        pixSrc=weight_paste(pixSrc,pixPng,id,index)
-    elif mode =='naive':
-        pixSrc=naive_paste(pixSrc,pixPng,id,index)
-    elif mode=='poisson':
-        pixSrc=poisson_blend(pixSrc,pixPng,id,index,x,y)
-    elif mode=='multiply':
-        pixSrc=multiply(pixSrc,pixPng,id,index)
+    # matching logo color with source image.
+    pixSrc_ = pixSrc.copy()[..., :3]
+    pixPng_ = pixPng.copy()[..., :3]
+    mean_source, stddev_source = cv2.meanStdDev(pixSrc_)
+    mean_png, stddev_png = cv2.meanStdDev(pixPng_)
+    mdiff = mean_png - mean_source
+    mdiff = np.array(mdiff).reshape((1, 1, 3))
+    pixPng_ = pixPng_.astype(np.float64)
+    pixPng_ -= mdiff
+    pixPng_ = np.clip(pixPng_, 0, 255)
+    pixPng_ = pixPng_.astype(np.uint8)
+    pixPng[..., :3] = pixPng_
 
-    return cv2.cvtColor(pixSrc,cv2.COLOR_RGBA2RGB)
+    if mode not in modes: raise NotImplementedError(
+        "only {0:'naive',1:'weight',2:'poisson',3:'multiply'} are supported.")
+    if mode == 'weight':
+        pixSrc = weight_paste(pixSrc, pixPng, id, index)
+    elif mode == 'naive':
+        pixSrc = naive_paste(pixSrc, pixPng, id, index)
+    elif mode == 'poisson':
+        pixSrc = poisson_blend(pixSrc, pixPng, id, index, x, y)
+    elif mode == 'multiply':
+        pixSrc = multiply(pixSrc, pixPng, id, index)
+
+    return cv2.cvtColor(pixSrc, cv2.COLOR_RGBA2RGB)

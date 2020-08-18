@@ -3,6 +3,7 @@ import os, sys
 from PIL import Image, ImageFile, ImageFilter, ImageEnhance
 from blend.AffineTrans import Affine
 from blend.PerspectiveTrans import Perspective
+from blend.transform import piecewiseAffineTrans
 from blend.img_blend import channel_blend, edge_blur, edge_virtual, edge_virtualv2
 import cv2
 import matplotlib.pyplot as plt
@@ -26,6 +27,8 @@ def args_arguments():
     parser.add_argument('--isaddPerspective', type=bool, default=True)
     parser.add_argument('--isaddAffine', type=bool, default=True)
     parser.add_argument('--isVirtualEdge', type=bool, default=True)
+    parser.add_argument('--isaddWave',type=bool,default=True)
+    parser.add_argument('--blend_mode', type=str, default='weight')
     parser.add_argument('--locations', default=[None],
                         help=" the param used to specify the logo locations blended in the source image."
                              "If list(int),four paris of corner coordinates are specified. precise loc specified if list(list)"
@@ -50,6 +53,17 @@ def is_inter(coord_1, coord_2):
 
 
 class addTransformation:
+    """
+    Perform all kinds of transformations on logo or flag images, then blending transformed image with source image.
+    The whole pipeline is as followe:
+    1、Given source and logo path, check the valid of path, and read images as a list from given path.
+    2、perform transformations on logo images, which includes perspective, affine, normal augmentation, wave et al.
+    3、blending source image and transformed image together using blending algorithm, like weight, poisson et al.
+    4、write the image and corresponding logo location into dir and txt, respectively.
+    Args:
+            args: parser.arguments, contains all the arguments needed.
+    """
+
     def __init__(self, args):
         self.inputDir = args.inputDir
         self.pngPath = args.pngPath
@@ -60,6 +74,8 @@ class addTransformation:
         self.isaddAffine = args.isaddAffine
         self.isaddPerspective = args.isaddPerspective
         self.isVirtualEdge = args.isVirtualEdge
+        self.isaddWave=args.isaddWave
+        self.blend_mode = args.blend_mode
         self.locations = args.locations
         self.logoSampleNumber = len(args.locations)
         self.pathCheck()
@@ -112,7 +128,7 @@ class addTransformation:
             x, y = random.randint(0, max(srcW - widthTrans, 0)), random.randint(0, max(0, srcH - heightTrans))
         return x, y
 
-    def setPath(self, informations):
+    def setPath(self, informations, debug=False):
         """
         Given informations, parse the output image name, txt path, output image path.
         Args:
@@ -122,11 +138,11 @@ class addTransformation:
 
         """
         logo_names = [info[2][:-4] for info in informations]
-        outImgName = str(informations[0][0]) + "_" + "_".join(logo_names) + "_{}".format(
-            datetime.datetime.now().strftime("%Y%m%H%d"))
+        outImgName = str(informations[0][0]) + "_" + "_".join(logo_names)
         outTxtpath = os.path.join(self.outTxtDir, outImgName + '.txt')
         # debug: test
-        output = os.path.join(self.outputDir, "{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M")))
+        output = os.path.join(self.outputDir,
+                              "{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M") + f'{self.blend_mode}'))
         if not os.path.exists(output): os.mkdir(output)
         outImgpath = os.path.join(output, outImgName + '.jpg')
         # outImgpath = os.path.join(self.outputDir, outImgName + '.jpg')
@@ -141,18 +157,19 @@ class addTransformation:
                isaddPerspective,
                isaddAffine,
                isVirtualEdge,
+               isaddWave,
                iters):
         """
         perform transformation on given logo image. Including monophonic processing, perspective and affine.
         the logo image converted to rgba, where alpha usually represents the opacity(不透明度）.
         Args:
-            srcImg:
-            pngImg: logo image
-            isResize:
-            isaddNoise:
-            isaddPerspective:
-            isaddAffine:
-            iters:
+            srcImg: (PIL format)
+            pngImg: (PIL format)logo image, in mode RGBA.
+            isResize: whether resize logo image
+            isaddNoise: whether add noise on logo
+            isaddPerspective: whether perform perspective warp on logo
+            isaddAffine: whether perform affine warp on logo
+            iters: number of current iterations.
 
         Returns:
 
@@ -210,6 +227,8 @@ class addTransformation:
                 pngImg = ImageEnhance.Sharpness(pngImg).enhance(random_factor)  # sharpness
 
         point_list = np.float32([[0, 0], [width, 0], [0, height], [width, height]])
+        if isaddWave:
+            pngImg, point_list = piecewiseAffineTrans(pngImg, point_list)
         if isaddPerspective:
             pngImg, point_list = Perspective(pngImg, point_list)
         if isaddAffine:
@@ -308,13 +327,15 @@ class addTransformation:
         #       pixSrc =cv2.rectangle(pixSrc,(coord[0],coord[1]),(coord[2],coord[3]),(0,255,0),2)
 
         # write image and txt file.
-        srcImg = Image.fromarray(pixSrc)
-        srcImg = srcImg.convert("RGB")
-        srcImg.save(outImgpath)
+        # ensure there are logo in images.
+        if not txt_content == '':
+            srcImg = Image.fromarray(pixSrc)
+            srcImg = srcImg.convert("RGB")
+            srcImg.save(outImgpath)
 
-        f = open(outTxtpath, 'w+')
-        f.write('{}.jpg'.format(outImgName) + txt_content)
-        f.close()
+            f = open(outTxtpath, 'w+')
+            f.write('{}.jpg'.format(outImgName) + txt_content)
+            f.close()
 
     def generate_blended_images(self):
         """
@@ -345,7 +366,8 @@ class addTransformation:
                 informations = []
                 for (logoImg, logoName) in zip(logoImgs, logofiles):
                     logoImgAug, info, point_list = self.ImgOPS(srcImg, logoImg, self.isResize, self.isaddNoise,
-                                                               self.isaddPerspective, self.isaddAffine, self.isVirtualEdge,
+                                                               self.isaddPerspective, self.isaddAffine,
+                                                               self.isVirtualEdge,self.isaddWave,
                                                                n)
                     logoImgAugs.append(logoImgAug)
                     point_lists.append(point_list)

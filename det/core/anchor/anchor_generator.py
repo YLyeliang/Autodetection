@@ -35,7 +35,7 @@ class AnchorGenerator(object):
             width and height. By default it is 0 in V2.0.
 
     Examples:
-        >>> from mmdet.core import AnchorGenerator
+        >>> from det.core import AnchorGenerator
         >>> self = AnchorGenerator([16], [1.], [1.], [9])
         >>> all_anchors = self.grid_anchors([(2, 2)], device='cpu')
         >>> print(all_anchors)
@@ -363,4 +363,102 @@ class SSDAnchorGenerator(AnchorGenerator):
                  input_size=300,
                  scale_major=True):
         assert len(strides) == len(ratios)
-        assert
+        assert mtcv.is_tuple_of(basesize_ratio_range, float)
+
+        self.strides = [_pair(stride) for stride in strides]
+        self.input_size = input_size
+        self.centers = [(stride[0] / 2., stride[1] / 2.) for stride in self.strides]
+        self.basesize_ratio_range = basesize_ratio_range
+
+        # calculate anchor ratios and scales
+        min_ratio, max_ratio = basesize_ratio_range
+        min_ratio = int(min_ratio * 100)
+        max_ratio = int(max_ratio * 100)
+        step = int(np.floor(max_ratio - min_ratio) / (self.num_levels - 2))
+        min_sizes = []
+        max_sizes = []
+        # TODO: Figue out the process
+        for ratio in range(int(min_ratio), int(max_ratio) + 1, step):
+            min_sizes.append(int(self.input_size * ratio / 100))
+            max_sizes.append(int(self.input_size * (ratio + step) / 100))
+        if self.input_size == 300:
+            if basesize_ratio_range[0] == 0.15:  # SSD300 COCO
+                min_sizes.insert(0, int(self.input_size * 7 / 100))
+                max_sizes.insert(0, int(self.input_size * 15 / 100))
+            elif basesize_ratio_range[0] == 0.2:  # SSD300 VOC
+                min_sizes.insert(0, int(self.input_size * 10 / 100))
+                max_sizes.insert(0, int(self.input_size * 20 / 100))
+            else:
+                raise ValueError(
+                    'basesize_ratio_range[0] should be either 0.15 or 0.2 when input_size is 300, got'
+                    f'{basesize_ratio_range[0]}.')
+        elif self.input_size == 512:
+            if basesize_ratio_range[0] == 0.1:  # SSD512 COCO
+                min_sizes.insert(0, int(self.input_size * 4 / 100))
+                max_sizes.insert(0, int(self.input_size * 10 / 100))
+            elif basesize_ratio_range[0] == 0.15:  # SSD512 VOC
+                min_sizes.insert(0, int(self.input_size * 7 / 100))
+                max_sizes.insert(0, int(self.input_size * 15 / 100))
+            else:
+                raise ValueError(
+                    'basesize_ratio_range[0] should be either 0.1 or 0.2 when input_size is 512, got'
+                    f'{basesize_ratio_range[0]}.')
+        else:
+            raise ValueError(f'Only support 300 or 512 in SSDAnchorGenrator, got {self.input_size}')
+
+        anchor_ratios = []
+        anchor_scales = []
+        for k in range(len(self.strides)):
+            scales = [1., np.sqrt(max_sizes[k] / min_sizes[k])]
+            anchor_ratio = [1.]
+            for r in ratios[k]:
+                anchor_ratio += [1 / r, r]  # 4 or 6 ratio
+            anchor_ratios.append(torch.Tensor(anchor_ratio))
+            anchor_scales.append(torch.Tensor(scales))
+
+        self.base_sizes = min_sizes
+        self.scales=anchor_scales
+        self.ratios=anchor_ratios
+        self.scale_major=scale_major
+        self.center_offset=0
+        self.base_anchors=self.gen_base_anchors()
+
+    def gen_base_anchors(self):
+        """
+        Generate base anchors.
+
+        Returns:
+            list(torch.Tensor): Base anchors of a feature grid in multiple \
+                feature levels.
+        """
+        multi_level_base_anchors=[]
+        for i,base_size in enumerate(self.base_sizes):
+            base_anchors = self.gen_single_level_base_anchors(
+                base_size,
+                scales=self.scales[i],
+                ratios=self.ratios,
+                center=self.centers[i])
+            indices = list(range(len(self.ratios[i])))
+            indices.insert(1,len(indices))
+            base_anchors = torch.index_select(base_anchors,0,torch.LongTensor(indices))
+            multi_level_base_anchors.append(base_anchors)
+
+        return multi_level_base_anchors
+
+    def __repr__(self):
+        """str: a string that describes the module"""
+        indent_str = '    '
+        repr_str = self.__class__.__name__ + '(\n'
+        repr_str += f'{indent_str}strides={self.strides},\n'
+        repr_str += f'{indent_str}scales={self.scales},\n'
+        repr_str += f'{indent_str}scale_major={self.scale_major},\n'
+        repr_str += f'{indent_str}input_size={self.input_size},\n'
+        repr_str += f'{indent_str}scales={self.scales},\n'
+        repr_str += f'{indent_str}ratios={self.ratios},\n'
+        repr_str += f'{indent_str}num_levels={self.num_levels},\n'
+        repr_str += f'{indent_str}base_sizes={self.base_sizes},\n'
+        repr_str += f'{indent_str}basesize_ratio_range='
+        repr_str += f'{self.basesize_ratio_range})'
+        return repr_str
+
+
