@@ -377,7 +377,6 @@ class addTransformation:
                 self.ImgBlend(srcImg, logoImgAugs, outImgName, outTxtpath, outImgpath, point_lists, self.locations,
                               logo_names)
 
-
 if __name__ == '__main__':
     args = args_arguments()
     Transformer = addTransformation(args)

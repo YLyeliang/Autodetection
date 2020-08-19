@@ -239,17 +239,18 @@ def channel_blend(pixSrc, pixPng, srcH, srcW, x, y, mode='weight', color_match=F
     id = (y_id, x_id)
 
     # matching logo color with source image.
-    pixSrc_ = pixSrc.copy()[..., :3]
-    pixPng_ = pixPng.copy()[..., :3]
-    mean_source, stddev_source = cv2.meanStdDev(pixSrc_)
-    mean_png, stddev_png = cv2.meanStdDev(pixPng_)
-    mdiff = mean_png - mean_source
-    mdiff = np.array(mdiff).reshape((1, 1, 3))
-    pixPng_ = pixPng_.astype(np.float64)
-    pixPng_ -= mdiff
-    pixPng_ = np.clip(pixPng_, 0, 255)
-    pixPng_ = pixPng_.astype(np.uint8)
-    pixPng[..., :3] = pixPng_
+    if color_match:
+        pixSrc_ = pixSrc.copy()[..., :3]
+        pixPng_ = pixPng.copy()[..., :3]
+        mean_source, stddev_source = cv2.meanStdDev(pixSrc_)
+        mean_png, stddev_png = cv2.meanStdDev(pixPng_)
+        mdiff = mean_png - mean_source
+        mdiff = np.array(mdiff).reshape((1, 1, 3))
+        pixPng_ = pixPng_.astype(np.float64)
+        pixPng_ -= mdiff
+        pixPng_ = np.clip(pixPng_, 0, 255)
+        pixPng_ = pixPng_.astype(np.uint8)
+        pixPng[..., :3] = pixPng_
 
     if mode not in modes: raise NotImplementedError(
         "only {0:'naive',1:'weight',2:'poisson',3:'multiply'} are supported.")
