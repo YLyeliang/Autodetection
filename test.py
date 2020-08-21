@@ -2,11 +2,12 @@ import torch
 # from det.models.backbones.resnet import ResNet
 from det.models.backbones.resnext import ResNeXt
 from det.models.necks.pafpn import PAFPN
-import numpy as np
-lr=0.001
-a=np.linspace(lr/20,lr,20).tolist()
-for _ in range(20):
-    print(a.pop(0))
+
+# import numpy as np
+# lr=0.001
+# a=np.linspace(lr/20,lr,20).tolist()
+# for _ in range(20):
+#     print(a.pop(0))
 
 # net=ResNet(50)
 # net=ResNeXt(depth=50,groups=32,base_width=4)

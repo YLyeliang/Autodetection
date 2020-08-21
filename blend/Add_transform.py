@@ -228,7 +228,9 @@ class addTransformation:
 
         point_list = np.float32([[0, 0], [width, 0], [0, height], [width, height]])
         if isaddWave:
-            pngImg, point_list = piecewiseAffineTrans(pngImg, point_list)
+            rand_num=random.randint(0,1)
+            if rand_num==1:
+                pngImg, point_list = piecewiseAffineTrans(pngImg, point_list)
         if isaddPerspective:
             pngImg, point_list = Perspective(pngImg, point_list)
         if isaddAffine:
@@ -247,7 +249,8 @@ class addTransformation:
                  outImgpath,
                  point_lists,
                  locations,
-                 logo_names):
+                 logo_names,
+                 debug=False):
         """
         Given source image and a series of logo images, then blending two image together, and result will be saved in
         the out image path.
@@ -320,11 +323,12 @@ class addTransformation:
             pixSrc = channel_blend(pixSrc, pixPng, srcH, srcW, x, y, mode='weight')
 
             # write txt content.
-            txt_content = f' {logo_names[i]} 0 0 {coordinate[0]} {coordinate[1]} {coordinate[2]} {coordinate[3]}'
+            txt_content += f' {logo_names[i]} 0 0 {coordinate[0]} {coordinate[1]} {coordinate[2]} {coordinate[3]}'
 
         # debug: show logo box.
-        # for coord in logoCoord:
-        #       pixSrc =cv2.rectangle(pixSrc,(coord[0],coord[1]),(coord[2],coord[3]),(0,255,0),2)
+        if debug:
+            for coord in logoCoord:
+                  pixSrc =cv2.rectangle(pixSrc,(coord[0],coord[1]),(coord[2],coord[3]),(0,255,0),2)
 
         # write image and txt file.
         # ensure there are logo in images.
@@ -375,7 +379,7 @@ class addTransformation:
                     informations.append(info)
                 outImgName, outTxtpath, outImgpath, logo_names = self.setPath(informations)
                 self.ImgBlend(srcImg, logoImgAugs, outImgName, outTxtpath, outImgpath, point_lists, self.locations,
-                              logo_names)
+                              logo_names,debug=False)
 
 if __name__ == '__main__':
     args = args_arguments()

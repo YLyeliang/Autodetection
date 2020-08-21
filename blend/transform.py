@@ -14,7 +14,7 @@ import cv2
 debug=True
 def piecewiseAffineTrans(image,point_list):
     """
-    Perform piecewise affine transformation on logo.
+    Perform piecewise affine transformation on flags to fit the wave effect.
     Args:
         image: PIL image in mode RGBA.
         point_list: list(list[int])). four pairs of corner coordinates.
@@ -52,8 +52,16 @@ def piecewiseAffineTrans(image,point_list):
     out=warp(np_image,tform,output_shape=(out_rows,out_cols),mode='constant',cval=0)
     out=out*255
     out=out.astype(np.uint8)
+
+    # get the actual logo coordinates, and clip it.
+    y_id,x_id = np.where(out[...,3]>15)
+    xmin,ymin=min(x_id),min(y_id)
+    xmax,ymax=max(x_id),max(y_id)
+    out = out[ymin:ymax+1,xmin:xmax+1,:]
     image=Image.fromarray(out)
-    point_list[2],point_list[3]=[0,out_rows],[out_cols,out_rows]
+
+    point_list[1], point_list[2],point_list[3]=[xmax-xmin,0],[0,ymax-ymin],[xmax-xmin,ymax-ymin]
+
     if debug:
         fig, ax = plt.subplots()
         ax.imshow(out)
