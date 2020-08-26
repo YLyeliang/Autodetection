@@ -1,8 +1,10 @@
 import logging
 import torch.nn as nn
+from torch.nn.modules.batchnorm import _BatchNorm
 from mtcv.cnn import build_conv_layer, build_norm_layer
 from mtcv.cnn.weight_init import kaiming_init, constant_init
 
+from ..builder import BACKBONES
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -183,6 +185,7 @@ def make_res_layer(block,
     return nn.Sequential(*layers)
 
 
+@BACKBONES.register_module()
 class ResNet(nn.Module):
     """ResNet backbone.
 
@@ -310,7 +313,7 @@ class ResNet(nn.Module):
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
                     kaiming_init(m)
-                elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+                elif isinstance(m, (_BatchNorm, nn.GroupNorm)):
                     constant_init(m, 1)
             if self.zero_init_residual:
                 for m in self.modules():
@@ -340,5 +343,5 @@ class ResNet(nn.Module):
         if mode and self.norm_eval:
             for m in self.modules():
                 # trick: eval have effect on BatchNorm only
-                if isinstance(m, nn.BatchNorm2d):
+                if isinstance(m, _BatchNorm):
                     m.eval()

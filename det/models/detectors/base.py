@@ -6,6 +6,10 @@ import numpy as np
 import torch
 import torch.distributed as dist
 import torch.nn as nn
+from mtcv.utils import print_log
+
+# from det.core import auto_fp16
+from det.utils import get_root_logger
 
 
 class BaseDetector(nn.Module, metaclass=ABCMeta):
@@ -29,7 +33,7 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
     def with_bbox(self):
         """bool: whether the detector has a bbox head"""
         return ((hasattr(self.roi_head, 'bbox_head') and self.roi_head.bbox_head is not None) or (
-                    hasattr(self, 'bbox_head') and self.bbox_head is not None))
+                hasattr(self, 'bbox_head') and self.bbox_head is not None))
 
     @property
     def with_mask(self):
@@ -148,8 +152,6 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
             assert 'proposals' not in kwargs
             return self.aug_test(imgs, img_metas, **kwargs)
 
-
-
     def forward(self, img, img_metas, return_loss=True, **kwargs):
         """Calls either :func:`forward_train` or :func:`forward_test` depending
         on whether ``return_loss`` is ``True``.
@@ -250,7 +252,6 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
 
         return outputs
 
-
     def show_result(self,
                     img,
                     result,
@@ -286,7 +287,7 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
         Returns:
             img (Tensor): Only if not `show` or `out_file`
         """
-        img = mmcv.imread(img)
+        img = mtcv.imread(img)
         img = img.copy()
         if isinstance(result, tuple):
             bbox_result, segm_result = result
@@ -302,7 +303,7 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
         labels = np.concatenate(labels)
         # draw segmentation masks
         if segm_result is not None and len(labels) > 0:  # non empty
-            segms = mmcv.concat_list(segm_result)
+            segms = mtcv.concat_list(segm_result)
             inds = np.where(bboxes[:, -1] > score_thr)[0]
             np.random.seed(42)
             color_masks = [
@@ -318,7 +319,7 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
         if out_file is not None:
             show = False
         # draw bounding boxes
-        mmcv.imshow_det_bboxes(
+        mtcv.imshow_det_bboxes(
             img,
             bboxes,
             labels,

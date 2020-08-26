@@ -100,7 +100,7 @@ def reshape_bboxes(bboxes):
           box+=[j]
     return box
 
-# path = "/data2/yeliang/data/stitch_test/bbox"
+# path = "/data2/yeliang/dataset/stitch_test/bbox"
 # array=read_txt_mklist(path)
 # # array=np.array(array)
 # # print(array.shape)

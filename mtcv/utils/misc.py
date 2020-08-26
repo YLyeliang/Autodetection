@@ -1,4 +1,13 @@
+import itertools
 from collections import abc
+
+
+def is_str(x):
+    """Whether the input is an string instance.
+
+    Note: This method is deprecated since python 2 is no longer supported.
+    """
+    return isinstance(x, str)
 
 
 def is_seq_of(seq, expected_type, seq_type=None):
@@ -39,3 +48,41 @@ def is_tuple_of(seq, expected_type):
     A partial method of :func:`is_seq_of`.
     """
     return is_seq_of(seq, expected_type, seq_type=tuple)
+
+
+def slice_list(in_list, lens):
+    """Slice a list into several sub lists by a list of given length.
+
+    Args:
+        in_list (list): The list to be sliced.
+        lens(int or list): The expected length of each out list.
+
+    Returns:
+        list: A list of sliced list.
+    """
+    if isinstance(lens, int):
+        assert len(in_list) % lens == 0
+        lens = [lens] * int(len(in_list) / lens)
+    if not isinstance(lens, list):
+        raise TypeError('"indices" must be an integer or a list of integers')
+    elif sum(lens) != len(in_list):
+        raise ValueError('sum of lens and list length does not '
+                         f'match: {sum(lens)} != {len(in_list)}')
+    out_list = []
+    idx = 0
+    for i in range(len(lens)):
+        out_list.append(in_list[idx:idx + lens[i]])
+        idx += lens[i]
+    return out_list
+
+
+def concat_list(in_list):
+    """Concatenate a list of list into a single list.
+
+    Args:
+        in_list (list): The list of list to be merged.
+
+    Returns:
+        list: The concatenated flat list.
+    """
+    return list(itertools.chain(*in_list))

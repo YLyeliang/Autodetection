@@ -3,8 +3,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from mtcv.cnn import xavier_init
 from .anchor_head import AnchorHead
+from det.core import (build_anchor_generator, build_assigner,
+                      build_bbox_coder, build_sampler, multi_apply)
+from ..losses import smooth_l1_loss
+
+from ..builder import HEADS
 
 
+@HEADS.register_module()
 class SSDHead(AnchorHead):
     """
     SSD head used in https://arxiv.org/abs/1512.02325
@@ -218,4 +224,30 @@ class SSDHead(AnchorHead):
         num_images = len(img_metas)
         all_cls_scores = torch.cat([
             s.permute(0, 2, 3, 1).reshape(num_images, -1, self.cls_out_channels) for s in cls_scores], 1)
-        all_labels = torch.cat(labels_list,-1).view(num_images,-1)
+        all_labels = torch.cat(labels_list, -1).view(num_images, -1)
+        all_label_weights = torch.cat(label_weights_list, -1).view(num_images, -1)
+        all_bbox_preds = torch.cat([b.permute(0, 2, 3, 1).reshape(num_images, -1, 4) for b in bbox_preds], -2)
+
+        all_bbox_targets = torch.cat(bbox_targets_list, -2).view(num_images, -1, 4)
+        all_bbox_weights = torch.cat(bbox_weights_list, -2).view(num_images, -1, 4)
+
+        # concat all level anchors to a single tensor
+        all_anchors = []
+        for i in range(num_images):
+            all_anchors.append(torch.cat(anchor_list[i]))
+
+        # check NaN and Inf
+        assert torch.isfinite(all_cls_scores).all().item(), 'classification scores become infinite or NaN'
+        assert torch.isfinite(all_bbox_preds).all().item(), 'bbox predictions become infinite or NaN'
+
+        losses_cls, losses_bbox = multi_apply(
+            self.loss_single,
+            all_cls_scores,
+            all_bbox_preds,
+            all_anchors,
+            all_labels,
+            all_label_weights,
+            all_bbox_targets,
+            all_bbox_weights,
+            numtotal_samples=num_total_pos)
+        return dict(losses_cls=losses_cls, losses_bbox=losses_bbox)

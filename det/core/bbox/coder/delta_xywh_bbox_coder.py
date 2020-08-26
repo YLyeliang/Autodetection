@@ -2,8 +2,9 @@ import numpy as np
 import torch
 
 from .base_bbox_coder import BaseBBoxCoder
+from ..builder import BBOX_CODERS
 
-
+@BBOX_CODERS.register_module()
 class DeltaXYWHBBoxCoder(BaseBBoxCoder):
     """Delta XYWH BBox coder.
 

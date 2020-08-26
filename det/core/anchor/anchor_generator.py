@@ -3,7 +3,10 @@ import numpy as np
 import torch
 from torch.nn.modules.utils import _pair
 
+from .builder import ANCHORE_GENERATORS
 
+
+@ANCHORE_GENERATORS.register_module()
 class AnchorGenerator(object):
     """
     Standard anchor generator for 2D anchor-based detectors.
@@ -339,6 +342,7 @@ class AnchorGenerator(object):
         return repr_str
 
 
+@ANCHORE_GENERATORS.register_module()
 class SSDAnchorGenerator(AnchorGenerator):
     """
     Anchor generator for SSD.
@@ -417,11 +421,11 @@ class SSDAnchorGenerator(AnchorGenerator):
             anchor_scales.append(torch.Tensor(scales))
 
         self.base_sizes = min_sizes
-        self.scales=anchor_scales
-        self.ratios=anchor_ratios
-        self.scale_major=scale_major
-        self.center_offset=0
-        self.base_anchors=self.gen_base_anchors()
+        self.scales = anchor_scales
+        self.ratios = anchor_ratios
+        self.scale_major = scale_major
+        self.center_offset = 0
+        self.base_anchors = self.gen_base_anchors()
 
     def gen_base_anchors(self):
         """
@@ -431,16 +435,16 @@ class SSDAnchorGenerator(AnchorGenerator):
             list(torch.Tensor): Base anchors of a feature grid in multiple \
                 feature levels.
         """
-        multi_level_base_anchors=[]
-        for i,base_size in enumerate(self.base_sizes):
+        multi_level_base_anchors = []
+        for i, base_size in enumerate(self.base_sizes):
             base_anchors = self.gen_single_level_base_anchors(
                 base_size,
                 scales=self.scales[i],
                 ratios=self.ratios,
                 center=self.centers[i])
             indices = list(range(len(self.ratios[i])))
-            indices.insert(1,len(indices))
-            base_anchors = torch.index_select(base_anchors,0,torch.LongTensor(indices))
+            indices.insert(1, len(indices))
+            base_anchors = torch.index_select(base_anchors, 0, torch.LongTensor(indices))
             multi_level_base_anchors.append(base_anchors)
 
         return multi_level_base_anchors
@@ -460,5 +464,3 @@ class SSDAnchorGenerator(AnchorGenerator):
         repr_str += f'{indent_str}basesize_ratio_range='
         repr_str += f'{self.basesize_ratio_range})'
         return repr_str
-
-

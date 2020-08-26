@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .utils import weight_reduce_loss
+from ..builder import LOSSES
 
 
 def cross_entropy(pred,
@@ -122,6 +123,7 @@ def mask_cross_entropy(pred,
     return F.binary_cross_entropy_with_logits(pred_slice,target,weight=class_weight,reduction='mean')[None]
 
 
+@LOSSES.register_module()
 class CrossEntropyLoss(nn.Module):
     def __init__(self,
                  use_sigmoid=False,

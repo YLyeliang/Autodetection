@@ -3,8 +3,9 @@ import torch
 from .base_assigner import BaseAssigner
 from .assign_result import AssignResult
 from ..iou_calculators import BboxOverlaps2D
+from ..builder import BBOX_ASSIGNERS
 
-
+@BBOX_ASSIGNERS.register_module()
 class MaxIoUAssigner(BaseAssigner):
     """Assign a corresponding gt bbox or background to each bbox.
 

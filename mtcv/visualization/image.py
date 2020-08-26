@@ -1,7 +1,8 @@
 import cv2
-from mmcv.visualization.color import color_val
-from mmcv.image import imread,imwrite
+from .color import color_val
+from mtcv.image import imread, imwrite
 import numpy as np
+
 
 def imshow(img, win_name='', wait_time=0):
     """Show an image.
@@ -13,6 +14,7 @@ def imshow(img, win_name='', wait_time=0):
     """
     cv2.imshow(win_name, imread(img))
     cv2.waitKey(wait_time)
+
 
 def imshow_det_bboxes(img,
                       bboxes,
@@ -62,7 +64,7 @@ def imshow_det_bboxes(img,
 
     bbox_color = color_val(bbox_color)
     text_color = color_val(text_color)
-
+    img = np.ascontiguousarray(img)
     for bbox, label in zip(bboxes, labels):
         bbox_int = bbox.astype(np.int32)
         left_top = (bbox_int[0], bbox_int[1])
@@ -70,14 +72,6 @@ def imshow_det_bboxes(img,
 
         label_text = class_names[
             label] if class_names is not None else 'cls {}'.format(label)
-        if 'person' not in label_text and 'car' not in label_text:
-            continue
-        if 'person' in label_text:
-            bbox_color=color_val('green')
-            text_color=color_val('green')
-        else:
-            bbox_color=color_val('yellow')
-            text_color=color_val('yellow')
         if len(bbox) > 4:
             label_text += '|{:.02f}'.format(bbox[-1])
         cv2.putText(img, label_text, (bbox_int[0], bbox_int[1] - 2),

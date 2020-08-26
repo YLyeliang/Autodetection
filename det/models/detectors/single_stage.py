@@ -2,8 +2,10 @@ import torch.nn as nn
 
 from det.core import bbox2result
 from .base import BaseDetector
+from ..builder import DETECTORS, build_backbone, build_head, build_neck
 
 
+@DETECTORS.register_module()
 class SingleStageDetector(BaseDetector):
     """Base class for single-stage detectors.
 

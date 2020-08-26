@@ -8,7 +8,7 @@ import cv2
 # image= cv2.cvtColor(cv2.imread(img_path),cv2.COLOR_BGR2RGB)
 # image = Image.open(img_path).convert('RGBA')
 
-# image = data.astronaut()
+# image = dataset.astronaut()
 # rows, cols = image.shape[0], image.shape[1]
 # rows, cols = image.size[1],image.size[0]
 debug=True

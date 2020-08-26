@@ -2,12 +2,11 @@ import logging
 import math
 
 import torch.nn as nn
-from torch.nn.modules.batchnorm import _BatchNorm
 from .resnet import ResNet
 from .resnet import Bottleneck as _Bottleneck
-from mtcv.cnn.weight_init import kaiming_init, xavier_init, constant_init
 from mtcv.cnn import build_norm_layer, build_conv_layer
 
+from ..builder import BACKBONES
 
 class Bottleneck(_Bottleneck):
     def __init__(self,
@@ -77,7 +76,7 @@ def make_res_layer(block,
 
     return nn.Sequential(*layers)
 
-
+@BACKBONES.register_module()
 class ResNeXt(ResNet):
     """ResNeXt backbone.
 

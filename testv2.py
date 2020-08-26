@@ -11,11 +11,11 @@ resnext=models.resnext50_32x4d(pretrained=True)
 # import numpy as np
 # import matplotlib.pyplot as plt
 # from skimage.transform import PiecewiseAffineTransform, warp
-# from skimage import data
+# from skimage import dataset
 # import os
 # import cv2
 
-# image = data.astronaut()
+# image = dataset.astronaut()
 # image = cv2.cvtColor(image,cv2.COLOR_RGB2BGR)
 # png='/Users/fiberhome/Downloads/source_data/png'
 # files=os.listdir(png)

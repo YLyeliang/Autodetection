@@ -27,10 +27,10 @@ Example:
 Example:
     >>> # Objects that define __len__ have a default __nice__
     >>> class Group(NiceRepr):
-    ...    def __init__(self, data):
-    ...        self.data = data
+    ...    def __init__(self, dataset):
+    ...        self.dataset = dataset
     ...    def __len__(self):
-    ...        return len(self.data)
+    ...        return len(self.dataset)
     >>> g = Group([1, 2, 3])
     >>> print(f'g = {g}')
     g = <Group(3)>

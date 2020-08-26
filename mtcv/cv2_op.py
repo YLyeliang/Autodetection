@@ -22,13 +22,13 @@ def remove_contours(contours,min=600,max=1000):
             contours_keep.append(contours[i])
     return contours_keep
 
-path="D:/data/start_end"
+path="D:/dataset/start_end"
 imgs= os.listdir(path)
 images=[]
 for img in imgs:
     images.append(os.path.join(path,img))
 
-img="D:/data/Camera_pred/4_Line17_up_20190411032509_29_34km+485.0m_forward.jpg"
+img="D:/dataset/Camera_pred/4_Line17_up_20190411032509_29_34km+485.0m_forward.jpg"
 
 for img in images:
 

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from .utils import weighted_loss
-
+from ..builder import LOSSES
 
 @weighted_loss
 def smooth_l1_loss(pred, target, beta=1.0):
@@ -39,6 +39,7 @@ def l1_loss(pred,target):
     return loss
 
 
+@LOSSES.register_module()
 class SmoothL1Loss(nn.Module):
     """Smooth L1 loss.
 
@@ -88,7 +89,7 @@ class SmoothL1Loss(nn.Module):
             **kwargs)
         return loss_bbox
 
-
+@LOSSES.register_module()
 class L1Loss(nn.Module):
     """L1 loss.
 

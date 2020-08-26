@@ -54,7 +54,7 @@ class SamplingResult(utils_mixins.NiceRepr):
         return torch.cat([self.pos_bboxes,self.neg_bboxes])
 
     def to(self,device):
-        """Change the device of the data inplace.
+        """Change the device of the dataset inplace.
 
         Example:
             >>> self = SamplingResult.random()
@@ -128,7 +128,7 @@ class SamplingResult(utils_mixins.NiceRepr):
         gt_bboxes = demodata.random_boxes(assign_result.num_gts, rng=rng)
 
         if rng.rand() > 0.2:
-            # sometimes algorithms squeeze their data, be robust to that
+            # sometimes algorithms squeeze their dataset, be robust to that
             gt_bboxes = gt_bboxes.squeeze()
             bboxes = bboxes.squeeze()
 
