@@ -1,8 +1,8 @@
 import torchvision
 from torchvision import models
 
-print(dir(models))
-resnext=models.resnext50_32x4d(pretrained=True)
+# print(dir(models))
+# resnext=models.resnext50_32x4d(pretrained=True)
 # densenet=models.densenet121(pretrained=True)
 
 # debug=1
@@ -49,3 +49,7 @@ resnext=models.resnext50_32x4d(pretrained=True)
 # cv2.imshow("img",img1)
 # cv2.waitKey()
 
+# from det.dataset import XMLDataset
+import mtcv
+# a=XMLDataset()
+print('load success')

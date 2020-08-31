@@ -9,6 +9,9 @@ if sys.version_info[0]==2:
 else:
     import xml.etree.ElementTree as ET
 
+from .xml_style import XMLDataset
+from .builder import DATASETS
+
 VOC_ROOT="/mnt/Data_Disk/lx/TBData/TB_confusion"
 
 class VOCAnnotationTransform(object):
@@ -108,6 +111,17 @@ class VOCDetection(data.Dataset):
 
     def pull_tensor(self,index):
         return torch.Tensor(self.pull_image(index)).unsqueeze_(0)
+
+
+@DATASETS.register_module()
+class TBDataset(XMLDataset):
+    CLASSES = {}
+
+    def __init__(self,**kwargs):
+        super(TBDataset, self).__init__(**kwargs)
+
+
+
 
 
 

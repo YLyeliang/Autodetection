@@ -9,14 +9,58 @@ from mtcv.runner import get_dist_info
 from mtcv.utils import Registry, build_from_cfg
 from torch.utils.data import DataLoader
 
-from .samplers
+from .samplers import DistributedSampler, DistributedGroupSampler, GroupSampler
+
+if platform.system() != 'Windows':
+    import resource
+
+    rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+    hard_limit = rlimit[1]
+    soft_limit = min(4096, hard_limit)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (soft_limit, hard_limit))
 
 DATASETS = Registry('dataset')
 PIPELINES = Registry('pipeline')
 
 
+def _concat_datset(cfg, default_args=None):
+    from .dataset_wrappers import ConcatDataset
+    ann_files = cfg['ann_file']
+    img_prefixes = cfg.get('img_prefix', None)
+    seg_prefixes = cfg.get('seg_prefix', None)
+    proposal_files = cfg.get('proposal_file', None)
+
+    datasets = []
+    num_dset = len(ann_files)
+    for i in range(num_dset):
+        data_cfg = copy.deepcopy(cfg)
+        data_cfg['ann_file'] = ann_files[i]
+        if isinstance(img_prefixes, (list, tuple)):
+            data_cfg['img_prefix'] = img_prefixes[i]
+        if isinstance(seg_prefixes, (list, tuple)):
+            data_cfg['seg_prefix'] = seg_prefixes[i]
+        if isinstance(proposal_files, (list, tuple)):
+            data_cfg['proposal_file'] = proposal_files[i]
+        datasets.append(build_dataset(data_cfg, default_args))
+
+    return ConcatDataset(datasets)
+
+
 def build_dataset(cfg, default_args=None):
-    from .data
+    from .dataset_wrappers import (ConcatDataset, RepeatDataset, ClassBalancedDataset)
+    if isinstance(cfg, (list, tuple)):
+        dataset = ConcatDataset([build_dataset(c, default_args) for c in cfg])
+    elif cfg['type'] == 'RepeatDataset':
+        dataset = RepeatDataset(build_dataset(cfg['dataset'], default_args), cfg['times'])
+    elif cfg['type'] == 'ClassBalancedDataset':
+        dataset = ClassBalancedDataset(
+            build_dataset(cfg['dataset'], default_args), cfg['oversample_thr'])
+    elif isinstance(cfg.get('ann_file'), (list, tuple)):
+        dataset = _concat_datset(cfg, default_args)
+    else:
+        dataset = build_from_cfg(cfg, DATASETS, default_args)
+
+    return dataset
 
 
 def build_dataloader(dataset,
@@ -52,9 +96,9 @@ def build_dataloader(dataset,
         # DistributedGroupSampler will definitely shuffle the data to satisfy
         # that images on each GPU are in the same group
         if shuffle:
-            sampler = Dis
+            sampler = DistributedGroupSampler(dataset, samples_per_gpu, world_size, rank)
         else:
-            sampler = Distributed
+            sampler = DistributedSampler(dataset, world_size, rank, shuffle=False)
 
         batch_size = samples_per_gpu
         num_workers = workers_per_gpu
@@ -72,8 +116,10 @@ def build_dataloader(dataset,
         num_workers=num_workers,
         collate_fn=partial(collate, samples_per_gpu=samples_per_gpu),
         pin_memory=False,
-        worker_init_fn=worker_init_fn,
+        worker_init_fn=init_fn,
         **kwargs)
+
+    return data_loader
 
 
 def worker_init_fn(worker_id, num_workers, rank, seed):

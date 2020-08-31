@@ -3,7 +3,7 @@ import torch.nn as nn
 from mtcv.cnn.weight_init import normal_init
 from .base_dense_head import BaseDenseHead
 from det.core import (multi_apply, unmap, images_to_levels, anchor_inside_flags,
-                      build_assigner, build_sampler, build_bbox_coder, build_anchor_generator)
+                      build_assigner, build_sampler, build_bbox_coder, build_anchor_generator, multiclass_nms)
 
 from ..builder import HEADS, build_loss
 

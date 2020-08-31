@@ -3,7 +3,7 @@ import os, sys
 from PIL import Image, ImageFile, ImageFilter, ImageEnhance
 from blend.AffineTrans import Affine
 from blend.PerspectiveTrans import Perspective
-from blend.transform import piecewiseAffineTrans
+from blend.transform import piecewiseAffineTransv2
 from blend.img_blend import channel_blend, edge_blur, edge_virtual, edge_virtualv2
 import cv2
 import matplotlib.pyplot as plt
@@ -230,7 +230,7 @@ class addTransformation:
         if isaddWave:
             rand_num=random.randint(0,1)
             if rand_num==1:
-                pngImg, point_list = piecewiseAffineTrans(pngImg, point_list)
+                pngImg, point_list = piecewiseAffineTransv2(pngImg, point_list)
         if isaddPerspective:
             pngImg, point_list = Perspective(pngImg, point_list)
         if isaddAffine:
