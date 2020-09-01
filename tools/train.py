@@ -10,7 +10,7 @@ from mtcv import Config, DictAction
 from mtcv.runner import init_dist
 
 from det.apis import train_detector, set_random_seed
-from det.dataset import build_dataset
+from det.datasets import build_dataset
 from det.models import build_detector
 from det.utils import get_root_logger, collect_env
 

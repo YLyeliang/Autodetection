@@ -8,7 +8,7 @@ from mtcv.runner import (HOOKS, DistSamplerSeedHook, EpochBasedRunner, Optimizer
 from mtcv.utils import build_from_cfg
 
 # from det.core import DistEvalHook, EvalHook
-from det.dataset import build_dataloader, build_dataset
+from det.datasets import build_dataloader, build_dataset
 from det.utils import get_root_logger
 
 

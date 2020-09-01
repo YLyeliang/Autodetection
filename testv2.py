@@ -49,7 +49,7 @@ from torchvision import models
 # cv2.imshow("img",img1)
 # cv2.waitKey()
 
-from det.dataset import XMLDataset
+from det.datasets import XMLDataset
 # import mtcv
 a=XMLDataset()
 print('load success')

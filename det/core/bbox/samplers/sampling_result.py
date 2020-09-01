@@ -8,7 +8,7 @@ class SamplingResult(utils_mixins.NiceRepr):
 
     Example:
         >>> # xdoctest: +IGNORE_WANT
-        >>> from mmdet.core.bbox.samplers.sampling_result import *  # NOQA
+        >>> from det.core.bbox.samplers.sampling_result import *  # NOQA
         >>> self = SamplingResult.random(rng=10)
         >>> print(f'self = {self}')
         self = <SamplingResult({
@@ -32,28 +32,27 @@ class SamplingResult(utils_mixins.NiceRepr):
         self.num_gts = gt_bboxes.shape[0]
         self.pos_assigned_gt_inds = assign_result.gt_inds[pos_inds] - 1
 
-        if gt_bboxes.numel()==0:
+        if gt_bboxes.numel() == 0:
             # hack for index error case
-            assert self.pos_assigned_gt_inds.numel() ==0
-            self.pos_gt_bboxes = torch.empty_like(gt_bboxes).view(-1,4)
+            assert self.pos_assigned_gt_inds.numel() == 0
+            self.pos_gt_bboxes = torch.empty_like(gt_bboxes).view(-1, 4)
         else:
-            if len(gt_bboxes.shape)<2:
-                gt_bboxes = gt_bboxes.view(-1,4)
+            if len(gt_bboxes.shape) < 2:
+                gt_bboxes = gt_bboxes.view(-1, 4)
 
-            self.pos_gt_bboxes=gt_bboxes[self.pos_assigned_gt_inds,:]
+            self.pos_gt_bboxes = gt_bboxes[self.pos_assigned_gt_inds, :]
 
         if assign_result.labels is not None:
             self.pos_gt_labels = assign_result.labels[pos_inds]
         else:
-            self.pos_gt_labels=None
-
+            self.pos_gt_labels = None
 
     @property
     def bboxes(self):
         """torch.Tensor: concatenated positive and negative boxes"""
-        return torch.cat([self.pos_bboxes,self.neg_bboxes])
+        return torch.cat([self.pos_bboxes, self.neg_bboxes])
 
-    def to(self,device):
+    def to(self, device):
         """Change the device of the dataset inplace.
 
         Example:
@@ -63,9 +62,9 @@ class SamplingResult(utils_mixins.NiceRepr):
             >>> print(f'self = {self.to(0)}')
         """
         _dict = self.__dict__
-        for key,value in _dict.items():
-            if isinstance(value,torch.Tensor):
-                _dict[key]=value.to(device)
+        for key, value in _dict.items():
+            if isinstance(value, torch.Tensor):
+                _dict[key] = value.to(device)
         return self
 
     def __nice__(self):
@@ -107,13 +106,13 @@ class SamplingResult(utils_mixins.NiceRepr):
             :obj:`SamplingResult`: Randomly generated sampling result.
 
         Example:
-            >>> from mmdet.core.bbox.samplers.sampling_result import *  # NOQA
+            >>> from det.core.bbox.samplers.sampling_result import *  # NOQA
             >>> self = SamplingResult.random()
             >>> print(self.__dict__)
         """
-        from mmdet.core.bbox.samplers.random_sampler import RandomSampler
-        from mmdet.core.bbox.assigners.assign_result import AssignResult
-        from mmdet.core.bbox import demodata
+        from det.core.bbox.samplers.random_sampler import RandomSampler
+        from det.core.bbox.assigners.assign_result import AssignResult
+        from det.core.bbox import demodata
         rng = demodata.ensure_rng(rng)
 
         # make probabalistic?

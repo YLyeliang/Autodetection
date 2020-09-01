@@ -81,7 +81,7 @@ def load_state_dict(module, state_dict, strict=False, logger=None):
 
 def load_checkpoint(model,
                     filename,
-                    mp_location=None,
+                    map_location=None,
                     strict=False,
                     logger=None):
     """
@@ -89,14 +89,14 @@ def load_checkpoint(model,
     Args:
         model (Module): Module to load checkpoint.
         filename (str): Accept local filepath
-        mp_location (str): Same as :func: 'torch.load'
+        map_location (str): Same as :func: 'torch.load'
         strict (bool): Whether to allow different params for the model and checkpoint.
         logger: (:mod:'logging.Logger' or None): The logger for error message.
 
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
-    checkpoint = torch.load(filename, map_location=mp_location)
+    checkpoint = torch.load(filename, map_location=map_location)
     # OrderedDict is a subclass of dict.
     if not isinstance(checkpoint, dict):
         raise RuntimeError(f'No state_dict found in checkpoint file {filename}')

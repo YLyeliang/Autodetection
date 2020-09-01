@@ -4,6 +4,8 @@ from torch.nn.modules.batchnorm import _BatchNorm
 from mtcv.cnn import build_conv_layer, build_norm_layer
 from mtcv.cnn.weight_init import kaiming_init, constant_init
 
+from mtcv.runner import load_checkpoint
+
 from ..builder import BACKBONES
 
 class BasicBlock(nn.Module):
@@ -308,7 +310,7 @@ class ResNet(nn.Module):
     def init_weights(self, pretrained=None):
         if isinstance(pretrained, str):
             logger = logging.getLogger()
-            # load_checkpoint(self,pretrained,strict=False,logger=logger)
+            load_checkpoint(self,pretrained,strict=False,logger=logger)
         elif pretrained is None:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
