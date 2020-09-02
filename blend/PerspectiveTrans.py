@@ -4,10 +4,12 @@ import numpy as np
 import random
 import math
 
-def rad(x):
-    return x*np.pi / 180
 
-def Perspective(src,point_list=None):
+def rad(x):
+    return x * np.pi / 180
+
+
+def Perspective(src, point_list=None):
     """
     Perspective transformation of image
     Args:
@@ -17,48 +19,47 @@ def Perspective(src,point_list=None):
     Returns:
 
     """
-    src = cv2.cvtColor(np.asarray(src),cv2.COLOR_RGBA2BGRA)
-    w_scale=(random.uniform(0,0.08),random.uniform(0,0.08))
-    h_scale=(random.uniform(0,0.08),random.uniform(0,0.08))
-    height,width = src.shape[:2]
-    shift_range_h=int(height*h_scale[0]+width*h_scale[1])
-    shift_range_w=int(height*w_scale[0]+width*w_scale[1])
-    src_points = np.float32([[0,0],[width,0],[0,height],[width,height]])
+    src = cv2.cvtColor(np.asarray(src), cv2.COLOR_RGBA2BGRA)
+    w_scale = (random.uniform(0, 0.08), random.uniform(0, 0.08))
+    h_scale = (random.uniform(0, 0.08), random.uniform(0, 0.08))
+    height, width = src.shape[:2]
+    shift_range_h = int(height * h_scale[0] + width * h_scale[1])
+    shift_range_w = int(height * w_scale[0] + width * w_scale[1])
+    src_points = np.float32([[0, 0], [width, 0], [0, height], [width, height]])
     dst_points = src_points.copy()
 
-    if shift_range_w>0 or shift_range_h>0:
-        if shift_range_w>0:
+    if shift_range_w > 0 or shift_range_h > 0:
+        if shift_range_w > 0:
             for i in range(4):
-                dst_points[i][0]+=np.random.randint(0,shift_range_w,1)
+                dst_points[i][0] += np.random.randint(0, shift_range_w, 1)
 
-        if shift_range_h>0:
+        if shift_range_h > 0:
             for i in range(4):
-                dst_points[i][1]+=np.random.randint(0,shift_range_h,1)
+                dst_points[i][1] += np.random.randint(0, shift_range_h, 1)
 
         # calculate the perspective transformation matrix.
         # [t_i*x_i,t_i*y_i,t_i] = map_matrix*[x_i,y_i,1] where i=0,1,2,3 related to four pairs of corresponding coordinates.
-        perspective_mat = cv2.getPerspectiveTransform(src=src_points,dst=dst_points)
+        perspective_mat = cv2.getPerspectiveTransform(src=src_points, dst=dst_points)
 
-        i_min=0
-        i_max=width-1
-        j_min=0
-        j_max=height-1
+        i_min = 0
+        i_max = width - 1
+        j_min = 0
+        j_max = height - 1
         for point in dst_points:
-            i_min=min(i_min,point[0])
-            i_max=max(i_max,point[0])
-            j_min=min(j_min,point[1])
-            j_max=max(j_max,point[1])
+            i_min = min(i_min, point[0])
+            i_max = max(i_max, point[0])
+            j_min = min(j_min, point[1])
+            j_max = max(j_max, point[1])
         for ii in range(3):
-            perspective_mat[0][ii] -= perspective_mat[2][ii]*i_min
-            perspective_mat[1][ii] -= perspective_mat[2][ii]*j_min
+            perspective_mat[0][ii] -= perspective_mat[2][ii] * i_min
+            perspective_mat[1][ii] -= perspective_mat[2][ii] * j_min
 
-        width_new = int(i_max-i_min)
-        height_new = int(j_max-j_min)
+        width_new = int(i_max - i_min)
+        height_new = int(j_max - j_min)
 
-        point_list_trans=[]
-        dst=cv2.warpPerspective(src,perspective_mat,(width_new,height_new),borderValue=(0,0,0,0))
+        dst = cv2.warpPerspective(src, perspective_mat, (width_new, height_new), borderValue=(0, 0, 0, 0))
 
-        img = Image.fromarray(cv2.cvtColor(dst,cv2.COLOR_BGRA2RGBA))
+        img = Image.fromarray(cv2.cvtColor(dst, cv2.COLOR_BGRA2RGBA))
 
         # debug:
         # import matplotlib.pyplot as plt
@@ -66,7 +67,7 @@ def Perspective(src,point_list=None):
         # plt.imshow(img)
         # plt.show()
 
-        return img,np.int32(dst_points).tolist()
+        return img, np.int32(dst_points).tolist()
     else:
-        img=Image.fromarray(cv2.cvtColor(src,cv2.COLOR_BGRA2RGBA))
-    return img,point_list
+        img = Image.fromarray(cv2.cvtColor(src, cv2.COLOR_BGRA2RGBA))
+    return img, point_list

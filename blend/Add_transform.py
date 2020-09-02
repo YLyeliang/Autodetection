@@ -1,10 +1,8 @@
 import datetime
 import os, sys
 from PIL import Image, ImageFile, ImageFilter, ImageEnhance
-from blend.AffineTrans import Affine
-from blend.PerspectiveTrans import Perspective
-from blend.transform import piecewiseAffineTransv2
-from blend.img_blend import channel_blend, edge_blur, edge_virtual, edge_virtualv2
+from blend.transform import logoEffect
+from blend.img_blend import channel_blend
 import cv2
 import matplotlib.pyplot as plt
 import argparse
@@ -27,7 +25,7 @@ def args_arguments():
     parser.add_argument('--isaddPerspective', type=bool, default=True)
     parser.add_argument('--isaddAffine', type=bool, default=True)
     parser.add_argument('--isVirtualEdge', type=bool, default=True)
-    parser.add_argument('--isaddWave',type=bool,default=True)
+    parser.add_argument('--isaddWave', type=bool, default=True)
     parser.add_argument('--blend_mode', type=str, default='weight')
     parser.add_argument('--locations', default=[None],
                         help=" the param used to specify the logo locations blended in the source image."
@@ -52,7 +50,7 @@ def is_inter(coord_1, coord_2):
     return 0 if w <= 0 or h <= 0 else 1  # 1 means overlap area existed and vice versa.
 
 
-class addTransformation:
+class addTransformation():
     """
     Perform all kinds of transformations on logo or flag images, then blending transformed image with source image.
     The whole pipeline is as followe:
@@ -74,7 +72,7 @@ class addTransformation:
         self.isaddAffine = args.isaddAffine
         self.isaddPerspective = args.isaddPerspective
         self.isVirtualEdge = args.isVirtualEdge
-        self.isaddWave=args.isaddWave
+        self.isaddWave = args.isaddWave
         self.blend_mode = args.blend_mode
         self.locations = args.locations
         self.logoSampleNumber = len(args.locations)
@@ -128,17 +126,27 @@ class addTransformation:
             x, y = random.randint(0, max(srcW - widthTrans, 0)), random.randint(0, max(0, srcH - heightTrans))
         return x, y
 
-    def setPath(self, informations, debug=False):
+    def setPath(self, informations, write_multi=False, debug=False):
         """
-        Given informations, parse the output image name, txt path, output image path.
+                Given informations, parse the output image name, txt path, output image path.
         Args:
-            informations(list(list)):each info in list contains: [iterations, idaddNoise,logoName]
+            informations (list(list)):each info in list contains: [iterations, idaddNoise,logoName]
+            write_multi (bool): if True, write multi logo names on image name. else only first logo write.
+            debug (bool): if True, create a new dir named by time to test.
 
         Returns:
+            outImgName (str): the output image name
+            outTxtpath (str): the output txt path
+            outImgpath (str): the output image path
+            logo_names (list(str)): the logo names.
 
         """
-        logo_names = [info[2][:-4] for info in informations]
-        outImgName = str(informations[0][0]) + "_" + "_".join(logo_names)
+        logo_names = [info[2].split('.')[0] for info in informations]
+        if write_multi:
+            outImgName = str(informations[0][0]) + "_" + "_".join(logo_names)
+        else:
+            outImgName = str(informations[0][0]) + "_" + logo_names[0]
+
         outTxtpath = os.path.join(self.outTxtDir, outImgName + '.txt')
         # debug: test
         output = os.path.join(self.outputDir,
@@ -228,16 +236,16 @@ class addTransformation:
 
         point_list = np.float32([[0, 0], [width, 0], [0, height], [width, height]])
         if isaddWave:
-            rand_num=random.randint(0,1)
-            if rand_num==1:
-                pngImg, point_list = piecewiseAffineTransv2(pngImg, point_list)
+            rand_num = random.randint(0, 1)
+            if rand_num == 1:
+                pngImg, point_list = logoEffect.piecewiseAffineTrans(pngImg, point_list)
         if isaddPerspective:
-            pngImg, point_list = Perspective(pngImg, point_list)
+            pngImg, point_list = logoEffect.Perspective(pngImg, point_list)
         if isaddAffine:
-            pngImg, point_list = Affine(pngImg, point_list)
+            pngImg, point_list = logoEffect.Affine(pngImg, point_list)
         if isVirtualEdge:
             # pngImg, point_list =edge_blur(pngImg,point_list)
-            pngImg, point_list = edge_virtualv2(pngImg, point_list)
+            pngImg, point_list = logoEffect.edge_virtual(pngImg, point_list)
 
         return pngImg, info, point_list
 
@@ -328,7 +336,7 @@ class addTransformation:
         # debug: show logo box.
         if debug:
             for coord in logoCoord:
-                  pixSrc =cv2.rectangle(pixSrc,(coord[0],coord[1]),(coord[2],coord[3]),(0,255,0),2)
+                pixSrc = cv2.rectangle(pixSrc, (coord[0], coord[1]), (coord[2], coord[3]), (0, 255, 0), 2)
 
         # write image and txt file.
         # ensure there are logo in images.
@@ -371,7 +379,7 @@ class addTransformation:
                 for (logoImg, logoName) in zip(logoImgs, logofiles):
                     logoImgAug, info, point_list = self.ImgOPS(srcImg, logoImg, self.isResize, self.isaddNoise,
                                                                self.isaddPerspective, self.isaddAffine,
-                                                               self.isVirtualEdge,self.isaddWave,
+                                                               self.isVirtualEdge, self.isaddWave,
                                                                n)
                     logoImgAugs.append(logoImgAug)
                     point_lists.append(point_list)
@@ -379,7 +387,7 @@ class addTransformation:
                     informations.append(info)
                 outImgName, outTxtpath, outImgpath, logo_names = self.setPath(informations)
                 self.ImgBlend(srcImg, logoImgAugs, outImgName, outTxtpath, outImgpath, point_lists, self.locations,
-                              logo_names,debug=False)
+                              logo_names, debug=False)
 
 if __name__ == '__main__':
     args = args_arguments()
