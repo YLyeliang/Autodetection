@@ -1,4 +1,5 @@
 import torch.nn as nn
+import numpy as np
 
 
 def constant_init(module, val, bias=0):
@@ -55,3 +56,9 @@ def caffe2_xavier_init(module, bias=0):
         mode='fan_in',
         nonlinearity='leaky_relu',
         distribution='uniform')
+
+
+def bias_init_with_prob(prior_prob):
+    """Initialize conv/fc bias value according to giving probability"""
+    bias_init = float(-np.log((1 - prior_prob) / prior_prob))
+    return bias_init

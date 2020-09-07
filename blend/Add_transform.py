@@ -20,6 +20,8 @@ def args_arguments():
                         help="output dir")
     parser.add_argument('--outTxtDir', type=str, default="/users/fiberhome/Downloads/source_data/txt",
                         help="directory of txt saving img name with locations")
+    parser.add_argument('--class_name', type=str, default=None,
+                        help='If specified, the class_name will be used to write output image file name.')
     parser.add_argument('--isResize', type=bool, default=True)
     parser.add_argument('--isaddNoise', type=bool, default=False)
     parser.add_argument('--isaddPerspective', type=bool, default=True)
@@ -59,23 +61,50 @@ class addTransformation():
     3、blending source image and transformed image together using blending algorithm, like weight, poisson et al.
     4、write the image and corresponding logo location into dir and txt, respectively.
     Args:
-            args: parser.arguments, contains all the arguments needed.
+        inputDir:
+        pngPath:
+        outputDir:
+        outTxtDir:
+        isResize:
+        isaddNoise:
+        isaddAffine:
+        isaddPerspective:
+        isVirtualEdge:
+        isaddWave:
+        blend_mode:
+        locations:
+        class_name: (str) If specify, the logoNames will be replaced by the class_name.
     """
 
-    def __init__(self, args):
-        self.inputDir = args.inputDir
-        self.pngPath = args.pngPath
-        self.outputDir = args.outputDir
-        self.outTxtDir = args.outTxtDir
-        self.isResize = args.isResize
-        self.isaddNoise = args.isaddNoise
-        self.isaddAffine = args.isaddAffine
-        self.isaddPerspective = args.isaddPerspective
-        self.isVirtualEdge = args.isVirtualEdge
-        self.isaddWave = args.isaddWave
-        self.blend_mode = args.blend_mode
-        self.locations = args.locations
-        self.logoSampleNumber = len(args.locations)
+    def __init__(self,
+                 inputDir,
+                 pngPath,
+                 outputDir,
+                 outTxtDir,
+                 isaddWave,
+                 locations,
+                 isResize=True,
+                 isaddNoise=False,
+                 isaddAffine=True,
+                 isaddPerspective=True,
+                 isVirtualEdge=True,
+                 blend_mode='weight',
+                 class_name=None):
+
+        self.inputDir = inputDir
+        self.pngPath = pngPath
+        self.outputDir = outputDir
+        self.outTxtDir = outTxtDir
+        self.isResize = isResize
+        self.isaddNoise = isaddNoise
+        self.isaddAffine = isaddAffine
+        self.isaddPerspective = isaddPerspective
+        self.isVirtualEdge = isVirtualEdge
+        self.isaddWave = isaddWave
+        self.blend_mode = blend_mode
+        self.locations = locations
+        self.logoSampleNumber = len(locations)
+        self.class_name = class_name
         self.pathCheck()
 
     def pathCheck(self):
@@ -141,7 +170,10 @@ class addTransformation():
             logo_names (list(str)): the logo names.
 
         """
-        logo_names = [info[2].split('.')[0] for info in informations]
+        if self.class_name is not None:
+            logo_names = [self.class_name for info in informations]
+        else:
+            logo_names = [info[2].split('.')[0] for info in informations]
         if write_multi:
             outImgName = str(informations[0][0]) + "_" + "_".join(logo_names)
         else:
@@ -149,11 +181,13 @@ class addTransformation():
 
         outTxtpath = os.path.join(self.outTxtDir, outImgName + '.txt')
         # debug: test
-        output = os.path.join(self.outputDir,
-                              "{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M") + f'{self.blend_mode}'))
+        if debug:
+            output = os.path.join(self.outputDir,
+                                  "{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M") + f'{self.blend_mode}'))
+        else:
+            output = self.outputDir
         if not os.path.exists(output): os.mkdir(output)
         outImgpath = os.path.join(output, outImgName + '.jpg')
-        # outImgpath = os.path.join(self.outputDir, outImgName + '.jpg')
 
         return outImgName, outTxtpath, outImgpath, logo_names
 
@@ -240,11 +274,14 @@ class addTransformation():
             if rand_num == 1:
                 pngImg, point_list = logoEffect.piecewiseAffineTrans(pngImg, point_list)
         if isaddPerspective:
-            pngImg, point_list = logoEffect.Perspective(pngImg, point_list)
+            rand_num = random.randint(0, 1)
+            if rand_num == 1:
+                pngImg, point_list = logoEffect.Perspective(pngImg, point_list)
         if isaddAffine:
-            pngImg, point_list = logoEffect.Affine(pngImg, point_list)
+            rand_num = random.randint(0, 1)
+            if rand_num == 1:
+                pngImg, point_list = logoEffect.Affine(pngImg, point_list)
         if isVirtualEdge:
-            # pngImg, point_list =edge_blur(pngImg,point_list)
             pngImg, point_list = logoEffect.edge_virtual(pngImg, point_list)
 
         return pngImg, info, point_list
@@ -349,25 +386,80 @@ class addTransformation():
             f.write('{}.jpg'.format(outImgName) + txt_content)
             f.close()
 
+    def get_logo_files(self, pngPath):
+        """
+        Each pngPath may contain 2 or 3 or 0 subdir, named with 'logo' 'with_wave' 'no_wave',
+        read all files from these subdir to a single list, and preserve index range[i,j]
+        corresponding to the subdir to decide the effect number in ImgOPS phase.
+        Args:
+            pngPath:
+
+        Returns:
+
+        """
+        choices = ['logo', 'no_wave', 'with_wave']
+        root, dirs, files = os.walk(pngPath).__next__()
+        for dir in dirs:
+            if not dir in choices:
+                raise ValueError(f'Only {choices} subdirs are supported, but got {dir}')
+        no_wave = []
+        with_wave = []
+        if len(dirs) == 2:
+            no_wave = os.listdir(os.path.join(pngPath, 'no_wave'))
+            with_wave = os.listdir(os.path.join(pngPath, 'with_wave'))
+            logo = files
+        elif len(dirs) == 3:
+            no_wave = os.listdir(os.path.join(pngPath, 'no_wave'))
+            with_wave = os.listdir(os.path.join(pngPath, 'with_wave'))
+            logo = files + os.listdir(os.path.join(pngPath, 'logo'))
+        else:
+            logo = files
+
+        logo_range, no_wave_range, with_wave_range = len(logo), len(no_wave) + len(logo), len(with_wave) + len(
+            no_wave) + len(logo)
+
+        return logo + no_wave + with_wave, [logo_range, no_wave_range, with_wave_range]
+
+    def random_png(self, logo_files, indexes, num=1):
+        logo_range, no_wave_range, with_wave_range = indexes
+        ids = random.sample([i for i in range(len(logo_files))], num)
+        logos = []
+        kwargs = []
+        for id in ids:
+            if id < logo_range:
+                kwarg = dict(isaddWave=False)
+            elif id < no_wave_range:
+                kwarg = dict(isaddWave=False)
+            else:
+                kwarg = dict(isaddWave=True)
+            logos.append(logo_files[id])
+            kwargs.append(kwarg)
+        return logos, kwargs
+
     def generate_blended_images(self):
         """
         the operator to iteratively generate blended images.
         Returns:
 
         """
+
         files = get_file_list(self.inputDir)
-        pngFiles = os.listdir(self.pngPath)
+        # pngFiles = os.listdir(self.pngPath)
+        pngFiles, indexs = self.get_logo_files(self.pngPath)
         random.shuffle(files)
 
         for n, file in enumerate(files):
             if n == 100: break
             try:
                 srcImg = Image.open(file)
+                srcImg = srcImg.convert('RGBA')
             except:
                 print("file {} can not open".format(file))
                 continue
-            if 150 <= srcImg.convert("RGBA").size[0] and 150 <= srcImg.convert("RGBA").size[1]:
-                logofiles = random.sample(pngFiles, self.logoSampleNumber)
+            if 150 <= srcImg.size[0] and 150 <= srcImg.size[1]:
+                print(f'file {file} is processing.')
+                # logofiles = random.sample(pngFiles, self.logoSampleNumber)
+                logofiles, kwargs = self.random_png(pngFiles, indexs, self.logoSampleNumber)
                 logoImgs = [Image.open(os.path.join(self.pngPath, logoFile)) for logoFile in logofiles]
                 for logo_id in range(len(logoImgs)):
                     if logoImgs[logo_id].mode != "RGBA":
@@ -376,11 +468,10 @@ class addTransformation():
                 logoImgAugs = []
                 point_lists = []
                 informations = []
-                for (logoImg, logoName) in zip(logoImgs, logofiles):
+                for (logoImg, logoName, kwarg) in zip(logoImgs, logofiles, kwargs):
                     logoImgAug, info, point_list = self.ImgOPS(srcImg, logoImg, self.isResize, self.isaddNoise,
                                                                self.isaddPerspective, self.isaddAffine,
-                                                               self.isVirtualEdge, self.isaddWave,
-                                                               n)
+                                                               self.isVirtualEdge, iters=n, **kwarg)
                     logoImgAugs.append(logoImgAug)
                     point_lists.append(point_list)
                     info.append(logoName)
@@ -389,7 +480,21 @@ class addTransformation():
                 self.ImgBlend(srcImg, logoImgAugs, outImgName, outTxtpath, outImgpath, point_lists, self.locations,
                               logo_names, debug=False)
 
+
 if __name__ == '__main__':
     args = args_arguments()
-    Transformer = addTransformation(args)
+    arguments = dict(inputDir=args.inputDir,
+                     pngPath=args.pngPath,
+                     outputDir=args.outputDir,
+                     outTxtDir=args.outTxtDir,
+                     isResize=args.isResize,
+                     isaddNoise=args.isaddNoise,
+                     isaddAffine=args.isaddAffine,
+                     isaddPerspective=args.isaddPerspective,
+                     isVirtualEdge=args.isVirtualEdge,
+                     isaddWave=args.isaddWave,
+                     blend_mode=args.blend_mode,
+                     locations=args.locations,
+                     class_name=args.class_name)
+    Transformer = addTransformation(**arguments)
     Transformer.generate_blended_images()

@@ -376,12 +376,12 @@ class Config:
                 with open(file, 'w') as f:
                     f.write(self.pretty_text)
         else:
-            import mmcv
+            import mtcv
             if file is None:
                 file_format = self.filename.split('.')[-1]
-                return mmcv.dump(cfg_dict, file_format=file_format)
+                return mtcv.dump(cfg_dict, file_format=file_format)
             else:
-                mmcv.dump(cfg_dict, file)
+                mtcv.dump(cfg_dict, file)
 
     def merge_from_dict(self, options):
         """Merge list into cfg_dict.

@@ -81,8 +81,8 @@ class logoEffect(object):
 
         """
         src = cv2.cvtColor(np.asarray(src), cv2.COLOR_RGBA2BGRA)
-        w_scale = (random.uniform(0, 0.08), random.uniform(0, 0.08))
-        h_scale = (random.uniform(0, 0.08), random.uniform(0, 0.08))
+        w_scale = (random.uniform(0, 0.3), random.uniform(0, 0.3))
+        h_scale = (random.uniform(0, 0.3), random.uniform(0, 0.3))
         height, width = src.shape[:2]
         shift_range_h = int(height * h_scale[0] + width * h_scale[1])
         shift_range_w = int(height * w_scale[0] + width * w_scale[1])
@@ -268,14 +268,14 @@ def piecewiseAffineTransv2(image, point_list, debug=False):
     factor = np.random.randint(h // 15, h // 10)
 
     # rows +[0,3*pi], which decides the wave.
-    dst_rows = src.copy()
-    for i in range(10, 20):
-        dst_rows[10 * i:10 * i + 5, 1] = dst_rows[10 * i + 9:-1:10 * 0 - 1, 1]
-
-    dst_rows = src[:, 1] - np.random.uniform(0, 2, 50) * factor
-    dst_cols = src[:, 0] - np.random.uniform(0, 2, 50) * factor
+    dst_cols = np.linspace(0, w*2, cols_point)
+    dst_rows = np.linspace(0, h//2, rows_point)
+    dst_rows, dst_cols = np.meshgrid(dst_rows, dst_cols)
+    dst = np.dstack([dst_cols.flat, dst_rows.flat])[0]
+    dst_rows = dst[:, 1]
+    dst_cols = dst[:, 0]
     dst_rows *= 1.5
-    dst_rows -= factor * 1.5
+    dst_rows += factor * 1.5
     dst = np.vstack([dst_cols, dst_rows]).T
     tform = PiecewiseAffineTransform()
     tform.estimate(src, dst)

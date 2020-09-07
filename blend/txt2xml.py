@@ -50,7 +50,8 @@ class DataTransform(object):
         else:
             merged_images = osp.abspath(self.img_dir)
         JPEG_images = osp.join(self.input_dir, 'JPEGImages')
-        os.rename(merged_images, JPEG_images)
+        if not osp.exists(JPEG_images) and osp.exists(merged_images):
+            os.rename(merged_images, JPEG_images)
         self.img_dir = JPEG_images
         annot_path = osp.join(self.input_dir, 'Annotations')
         imagesets = osp.join(self.input_dir, 'ImageSets', 'Main')
@@ -77,7 +78,7 @@ class DataTransform(object):
             line = f.readline()
             line = line.strip().split(' ')
             print(f'file {txt_name} is processed.')
-            img = cv2.imread(self.img_dir, line[0])
+            img = cv2.imread(osp.join(self.img_dir, line[0]))
             try:
                 sp = img.shape
             except:
@@ -86,7 +87,7 @@ class DataTransform(object):
             height = sp[0]
             width = sp[1]
             depth = sp[2]
-            file_name = line[2].split('.')[0]
+            file_name = line[0].split('.')[0]
             logos = line[1::7]
             xmins = line[4::7]
             ymins = line[5::7]
@@ -112,5 +113,5 @@ class DataTransform(object):
                     xml.write(f'\t\t\t<ymax>{ymaxs[i]}</ymax>\n')
                     xml.write('\t\t</bndbox>\n')
                     xml.write('\t</object>\n')
-                xml.write('\t</annotation>')
+                xml.write('</annotation>')
         trainval.close()

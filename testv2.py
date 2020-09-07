@@ -4,7 +4,7 @@ from torchvision import models
 # print(dir(models))
 # resnext=models.resnext50_32x4d(pretrained=True)
 # densenet=models.densenet121(pretrained=True)
-
+# resnet= models.resnet50()
 # debug=1
 
 
@@ -49,7 +49,11 @@ from torchvision import models
 # cv2.imshow("img",img1)
 # cv2.waitKey()
 
-from det.datasets import XMLDataset
+# from det.datasets import XMLDataset
 # import mtcv
-a=XMLDataset()
-print('load success')
+# a=XMLDataset()
+# print('load success')
+
+import os
+root,dirs,files =os.walk('.').__next__()
+debug=1
