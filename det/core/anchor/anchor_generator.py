@@ -291,6 +291,8 @@ class AnchorGenerator(object):
                                                   (valid_feat_h, valid_feat_w),
                                                   self.num_base_anchors[i],
                                                   device=device)
+            multi_level_flags.append(flags)
+        return multi_level_flags
 
     def single_level_valid_flags(self,
                                  featmap_size,

@@ -37,7 +37,7 @@ class LrUpdaterHook(Hook):
             assert 0 < warmup_ratio <= 1.0, '"warmup_ratio" must be in range (0,1]'
 
         self.by_epoch = by_epoch
-        self.warmup = warmup_ratio
+        self.warmup = warmup
         self.warmup_iters = warmup_iters
         self.warmup_ratio = warmup_ratio
         self.warmup_by_epoch = warmup_by_epoch
@@ -94,14 +94,14 @@ class LrUpdaterHook(Hook):
             self.base_lr = {}
             for k, optim in runner.optimizer.items():
                 for group in optim.param_groups:
-                    group.setdefaut('initial_lr', group['lr'])
+                    group.setdefault('initial_lr', group['lr'])
                 _base_lr = [
                     group['initial_lr'] for group in optim.param_groups
                 ]
                 self.base_lr.update({k: _base_lr})
         else:
             for group in runner.optimizer.param_groups:
-                group.setdefaut('initial_lr', group['lr'])
+                group.setdefault('initial_lr', group['lr'])
             self.base_lr = [
                 group['initial_lr'] for group in runner.optimizer.param_groups]
 

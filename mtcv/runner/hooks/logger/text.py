@@ -78,9 +78,9 @@ class TextLoggerHook(LoggerHook):
             # by iter: Iter [100/100000]
             if self.by_epoch:
                 log_str = f'Epoch [{log_dict["epoch"]}]' \
-                          f'[{log_dict["iter"]}/{runner.max_iters}]\t'
+                          f'[{log_dict["iter"]}/{len(runner.data_loader)}]\t'
             else:
-                log_str = f'Iter [{log_dict["iter"]}/{runner.max_ters}]\t'
+                log_str = f'Iter [{log_dict["iter"]}/{runner.max_iters}]\t'
             log_str += f'{lr_str}, '
 
             if 'time' in log_dict.keys():
@@ -112,6 +112,8 @@ class TextLoggerHook(LoggerHook):
                 val = f'{val:.4f}'
             log_items.append(f'{name}: {val}')
         log_str += ', '.join(log_items)
+
+        runner.logger.info(log_str)
 
     def _dump_log(self, log_dict, runner):
         # dump log in json format

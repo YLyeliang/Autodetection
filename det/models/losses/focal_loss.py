@@ -119,4 +119,4 @@ class FocalLoss(nn.Module):
                 avg_factor=avg_factor)
         else:
             raise NotImplementedError
-        raise loss_cls
+        return loss_cls

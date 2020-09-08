@@ -10,7 +10,7 @@ from .hook import HOOKS, Hook
 class OptimizerHook(Hook):
 
     def __init__(self, grad_clip=None):
-        self.grag_clip = grad_clip
+        self.grad_clip = grad_clip
 
     def clip_grads(self, params):
         params = list(filter(lambda p: p.requires_grad and p.grad is not None, params))

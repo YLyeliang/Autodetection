@@ -44,6 +44,10 @@ class TBDataset(data.Dataset):
         # processing pipeline
         self.pipeline = Compose(pipeline)
 
+    def __len__(self):
+        """Total number of samples of data."""
+        return len(self.data_infos)
+
     def pre_pipeline(self, results):
         """Prepare results dict for pipeline."""
         results['img_prefix'] = self.img_prefix

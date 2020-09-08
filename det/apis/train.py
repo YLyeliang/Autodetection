@@ -46,7 +46,7 @@ def train_detector(model,
     data_loaders = [
         build_dataloader(
             ds,
-            cfg.data.samplers_per_gpu,
+            cfg.data.samples_per_gpu,
             cfg.data.workers_per_gpu,
             # cfg.gpus will be ignored if distributed
             len(cfg.gpu_ids),
