@@ -48,7 +48,20 @@ def get_file_lists(root, dirs):
     return ids
 
 
-def write_results_txt(results):
+def get_file_template(path, cls):
+    filename = f'det__{cls}'
+    if not osp.exists(path):
+        os.makedirs(path)
+    path = osp.join(path, filename)
+    return path
+
+
+def write_results_txt(path, all_bboxes):
+    for class_name, file_bbox in all_bboxes.items():
+        file = get_file_template(path, class_name)
+        with open(file, 'wt') as f:
+            for filename, bbox in file_bbox.items():
+                f.write(f'{filename} {bbox[-1]} {bbox[0]} {bbox[1]} {bbox[2]} {bbox[3]}\n')
 
 
 root = ''
@@ -60,18 +73,19 @@ checkpoint_file = ''
 # build the model from a config file and a checkpoint file
 model = init_detector(config_file, checkpoint_file, device='cuda:0')
 
+class_names = model.CLASSES
 # get file lists.
 img_list = get_file_lists(root, img_path)
 
 all_bboxes = {}
-all_bboxes['filename'] = []
-all_bboxes['cls'] = []
-all_bboxes['scores'] = []
-all_bboxes['bbox'] = []
+
+# initialize the dict
+for cls in class_names:
+    all_bboxes[cls] = dict()
 
 for img in img_list:
-    result = inference_detector(model, img)  # result : a list, where length =num_classes,
-    all_bboxes['filename'].append(img)
+    # result : a list, where length =num_classes, each one is bboxes of corresponding class
+    result = inference_detector(model, img)
     # TODO: waiting for debugging.
     labels = [
         np.full(bbox.shape[0], i, dtype=np.int32)
@@ -81,7 +95,7 @@ for img in img_list:
     bboxes = np.vstack(result)
     assert bboxes.shape[1] == 5
     scores = bboxes[:, -1]
-    inds = scores > 0
+    inds = scores > 0.01  # score_thr = 0.01
     bboxes = bboxes[inds, :]
     labels = labels[inds]
     for bbox, label in zip(bboxes, labels):
@@ -90,5 +104,4 @@ for img in img_list:
         right_bottom = (bbox_int[2], bbox_int[3])
         label_text = class_names[
             label] if class_names is not None else 'cls {}'.format(label)
-        cls
-    all_bboxes['cls']
+        all_bboxes[label_text][img] = bbox

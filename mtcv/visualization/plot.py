@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from skimage.util import montage
 
 
 def plot():
@@ -50,7 +51,7 @@ def parse_refinedet_txt(txt):
 
 def loss_plot(info_dict, info_dict2):
     """
-
+    plot loss curve in Refinedet.
     Args:
         info_dict: (dict) contains iter, arm_l, arm_c, odm_l, odm_c
 
@@ -60,3 +61,23 @@ def loss_plot(info_dict, info_dict2):
     plt.plot(info_dict['iter'], info_dict['arm_l'], 'r', label='arm_l_scratch')
     plt.plot(info_dict2['iter'], info_dict2['arm_l'], 'r--', label='arm_l_pretrained')
 
+
+def montage_plot(images, save_path=None, figsize=(30, 10), num_montages=1):
+    if num_montages == 1:
+        fig = plt.figure(figsize=figsize)
+        montage_imgs = montage(images)
+        plt.imshow(montage_imgs)
+        plt.axis('on')
+        plt.title("样本示例")
+        if save_path is not None:
+            plt.savefig(save_path)
+
+# batch_rgb = montage_rgb(train_x)
+# batch_seg = montage(train_y[:, :, :, 0])
+# ax1.imshow(batch_rgb)
+# ax1.set_title('Images')
+# ax2.imshow(batch_seg)
+# ax2.set_title('Segmentations')
+# ax3.imshow(montage_rgb(mark_image(train_x,train_y)))
+# ax3.set_title('Outlined Ships')
+# fig.savefig('overview.png')

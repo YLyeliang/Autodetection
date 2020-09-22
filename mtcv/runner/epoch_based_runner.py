@@ -145,7 +145,7 @@ class EpochBasedRunner(BaseRunner):
         filename = filename_tmpl.format(self.epoch + 1)
         filepath = osp.join(out_dir, filename)
         optimizer = self.optimizer if save_optimizer else None
-        save_checkpoint(self.mode, filepath, optimizer=optimizer, meta=meta)
+        save_checkpoint(self.model, filepath, optimizer=optimizer, meta=meta)
         # in some environments, 'os.symlink' is not supported, you may need to set 'create_symlink' to False
         if create_symlink:
             mtcv.symlink(filename, osp.join(out_dir, 'latest.pth'))

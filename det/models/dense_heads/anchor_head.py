@@ -158,7 +158,7 @@ class AnchorHead(BaseDenseHead):
                            label_channels=1,
                            unmap_outputs=True):
         """
-        Compute regression and classification targets for anchors in a single iamge.
+        Compute regression and classification targets for anchors in a single image.
         Args:
             flat_anchors: (Tensor): Multi-level anchors of the image, which are concatenated into
             a single tensor of shape (num_anchors, 4)

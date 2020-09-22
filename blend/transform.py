@@ -8,6 +8,12 @@ import cv2
 
 
 class logoEffect(object):
+    """
+    The input of image should be format PIL.Image with shape (W,H,4) where 4 represents RGBA.
+    Each function will process the image, the inter process may change the image style to BGRA or else,
+    but eventually function will return a PIL.Image with shape (W,H,4) and a list (point_list), which
+    represents the four coordinates of real logo images ( which means the min covered region of alpha !=0)
+    """
 
     @staticmethod
     def piecewiseAffineTrans(image, point_list, debug=False):
@@ -226,9 +232,9 @@ class logoEffect(object):
         mask[0, :], mask[-1, :], mask[:, 0], mask[:, -1] = 0, 0, 0, 0
         # iteratively erode the mask and assigned the removed region to division factor in descend.
         if side < 100:
-            factors = np.linspace(1.5, 1, 5)
+            factors = np.linspace(1.5, 1, degree)
         else:
-            factors = np.linspace(2, 1, 10)
+            factors = np.linspace(2, 1, 2 * degree)
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
         for factor in factors:
             dil = cv2.erode(mask, kernel)
@@ -240,6 +246,59 @@ class logoEffect(object):
         src[:, :, 3] = alpha
         img = Image.fromarray(cv2.cvtColor(src, cv2.COLOR_BGRA2RGBA))
         return img, point_list
+
+    @staticmethod
+    def RandomFlip(src, point_list=None, direction='horizontal'):
+        """
+        Perform random horizontal or vetical flip of image.
+        Args:
+            src:
+            point_list:
+            direction:
+
+        Returns:
+
+        """
+        assert direction in ['horizontal', 'vertical']
+        src = np.asarray(src)
+        if direction == 'horizontal':
+            flip = np.flip(src, axis=1)
+            src = Image.fromarray(flip)
+            return src, np.flip(np.array(point_list), axis=1).tolist()
+        else:
+            flip = np.flip(src, axis=0)
+            src = Image.fromarray(flip)
+            return src, np.flip(np.array(point_list), axis=0).tolist()
+
+    @staticmethod
+    def Randomrotate(src, point_list=None, border_value=(0,0,0,0), auto_bound=True):
+        """
+        Perform random rotate of image.
+        Args:
+            src:
+            point_list:
+
+        Returns:
+
+        """
+        # TODO: To add point_list calculation and debug.
+        src = cv2.cvtColor(np.asarray(src), cv2.COLOR_RGBA2BGRA)
+        h, w = src.shape[:2]
+        angle = np.random.randint(-30, 30)
+        center = ((w - 1) * 0.5, (h - 1) * 0.5)
+        matrix = cv2.getRotationMatrix2D(center, -angle, scale=1.0)
+        if auto_bound:
+            cos = np.abs(matrix[0, 0])
+            sin = np.abs(matrix[0, 1])
+            new_w = h * sin + w * cos
+            new_h = h * cos + w * sin
+            matrix[0, 2] += (new_w - w) * 0.5
+            matrix[1, 2] += (new_h - h) * 0.5
+            w = int(np.round(new_w))
+            h = int(np.round(new_h))
+        rotated = cv2.warpAffine(src, matrix, (w, h), borderValue=border_value)
+
+
 
 
 def piecewiseAffineTransv2(image, point_list, debug=False):
@@ -268,8 +327,8 @@ def piecewiseAffineTransv2(image, point_list, debug=False):
     factor = np.random.randint(h // 15, h // 10)
 
     # rows +[0,3*pi], which decides the wave.
-    dst_cols = np.linspace(0, w*2, cols_point)
-    dst_rows = np.linspace(0, h//2, rows_point)
+    dst_cols = np.linspace(0, w * 2, cols_point)
+    dst_rows = np.linspace(0, h // 2, rows_point)
     dst_rows, dst_cols = np.meshgrid(dst_rows, dst_cols)
     dst = np.dstack([dst_cols.flat, dst_rows.flat])[0]
     dst_rows = dst[:, 1]

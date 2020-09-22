@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from mtcv.cnn import ConvModule
@@ -20,6 +21,7 @@ class PAFPN(FPN):
                  start_level=0,
                  end_level=-1,
                  add_extra_convs=False,
+                 with_spp=False,
                  extra_convs_on_inputs=True,
                  relu_before_extra_convs=False,
                  no_norm_on_lateral=False,
@@ -27,8 +29,8 @@ class PAFPN(FPN):
                  norm_cfg=None,
                  act_cfg=dict(type='relu')):
         super(PAFPN, self).__init__(in_channels, out_channels, num_outs, start_level,
-                                    end_level, add_extra_convs, extra_convs_on_inputs, relu_before_extra_convs,
-                                    no_norm_on_lateral, conv_cfg, norm_cfg, act_cfg)
+                                    end_level, add_extra_convs, with_spp, extra_convs_on_inputs,
+                                    relu_before_extra_convs, no_norm_on_lateral, conv_cfg, norm_cfg, act_cfg)
 
         # add extra bottom up pathway
         self.downsample_convs = nn.ModuleList()
@@ -59,6 +61,18 @@ class PAFPN(FPN):
     def forward(self, inputs):
         """Forward function."""
         assert len(inputs) == len(self.in_channels)
+
+        # spp
+        if self.with_spp:
+            for conv in self.spp_conv:
+                inputs[-1] = conv(inputs[-1])
+            last_input = inputs[-1]
+            spp_outs = [last_input]
+            for maxpool in self.spp:
+                spp_outs.append(maxpool(inputs[-1]))
+            inputs[-1] = torch.cat(spp_outs, dim=1)
+            for conv in self.spp_end:
+                inputs[-1] = conv(inputs[-1])
 
         # build laterals
         laterals = [

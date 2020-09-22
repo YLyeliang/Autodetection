@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 from mtcv.cnn import ConvModule, xavier_init
+import torch
 
 # from det.core import auto_fp16
 from ..builder import NECKS
@@ -21,6 +22,7 @@ class FPN(nn.Module):
                  start_level=0,
                  end_level=-1,
                  add_extra_convs=False,
+                 with_spp=False,
                  extra_convs_on_inputs=True,
                  relu_before_extra_convs=False,
                  no_norm_on_lateral=False,
@@ -50,6 +52,7 @@ class FPN(nn.Module):
         self.start_level = start_level
         self.end_level = end_level
         self.add_extra_convs = add_extra_convs
+        self.with_spp = with_spp
         assert isinstance(add_extra_convs, (str, bool))
         if isinstance(add_extra_convs, str):
             # Extra_convs_source choices: 'on_input', 'on_lateral', 'on_output'
@@ -59,6 +62,40 @@ class FPN(nn.Module):
                 self.add_extra_convs = 'on_input'
             else:
                 self.add_extra_convs = 'on_output'
+
+        # TODO: complete the SPP module
+        if self.with_spp:
+            self.spp_pool = nn.ModuleList()
+            self.spp_conv = nn.ModuleList()
+            self.spp_end = nn.ModuleList()
+            pool_size = (5, 9, 13)
+            conv_size = (1, 3, 1)
+            pad = (0, 1, 0)
+            spp_channels = (512, 1024, 512)
+            in_channel = in_channels[-1]
+            for i, (pool, kernel) in enumerate(zip(pool_size, conv_size)):
+                maxpool = nn.MaxPool2d(kernel_size=pool, stride=1, padding=pool // 2)
+                conv = ConvModule(
+                    in_channels[-1],
+                    spp_channels[i],
+                    kernel,
+                    conv_cfg=conv_cfg,
+                    norm_cfg=norm_cfg,
+                    act_cfg=act_cfg,
+                    inplace=False)
+                self.spp_pool.append(maxpool)
+                self.spp_conv.append(conv)
+                if not i == len(spp_channels) - 1:
+                    spp_end = ConvModule(
+                        in_channels[-1] * 2 if i == 0 else in_channel,
+                        spp_channels[i],
+                        kernel,
+                        padding=pad[i],
+                        conv_cfg=conv_cfg,
+                        norm_cfg=norm_cfg,
+                        act_cfg=act_cfg,
+                        inplace=False)
+                    self.spp_end.append(spp_end)
 
         self.lateral_convs = nn.ModuleList()
         self.fpn_convs = nn.ModuleList()
@@ -114,6 +151,18 @@ class FPN(nn.Module):
     def forward(self, inputs):
         """Forward function."""
         assert len(inputs) == len(self.in_channels)
+
+        # spp
+        if self.with_spp:
+            for conv in self.spp_conv:
+                inputs[-1] = conv(inputs[-1])
+            last_input = inputs[-1]
+            spp_outs = [last_input]
+            for maxpool in self.spp:
+                spp_outs.append(maxpool(inputs[-1]))
+            inputs[-1] = torch.cat(spp_outs, dim=1)
+            for conv in self.spp_end:
+                inputs[-1] = conv(inputs[-1])
 
         # build laterals    1 x 1 conv
         laterals = [

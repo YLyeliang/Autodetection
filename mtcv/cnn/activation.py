@@ -11,14 +11,16 @@ class Mish(nn.Module):
         x = x * (torch.tanh(torch.nn.functional.softplus(x)))
         return x
 
-act_cfg={
-    "relu":nn.ReLU,
-    "relu6":nn.ReLU6,
-    "leaky":nn.LeakyReLU,
-    "mish":Mish
+
+act_cfg = {
+    "ReLU": nn.ReLU,
+    "ReLU6": nn.ReLU6,
+    "LeakyReLU": nn.LeakyReLU,
+    "Mish": Mish
 }
 
-def build_act_layer(cfg,*args, **kwargs):
+
+def build_act_layer(cfg, *args, **kwargs):
     """
     Build activation layer.
     Args:
@@ -29,13 +31,13 @@ def build_act_layer(cfg,*args, **kwargs):
 
     """
     if cfg is None:
-        cfg_= dict(type="ReLU")
+        cfg_ = dict(type="ReLU")
     else:
-        assert isinstance(cfg,dict) and 'type' in cfg
-        cfg_=cfg.copy()
-    layer_type=cfg_.pop('type')
+        assert isinstance(cfg, dict) and 'type' in cfg
+        cfg_ = cfg.copy()
+    layer_type = cfg_.pop('type')
     if layer_type not in act_cfg:
         raise KeyError('Unrecognized norm type {}'.format(layer_type))
     else:
         act_layer = act_cfg[layer_type]
-    return act_layer(*args,**kwargs)
+    return act_layer(*args, **kwargs)

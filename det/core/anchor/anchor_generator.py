@@ -383,7 +383,7 @@ class SSDAnchorGenerator(AnchorGenerator):
         step = int(np.floor(max_ratio - min_ratio) / (self.num_levels - 2))
         min_sizes = []
         max_sizes = []
-        # TODO: Figue out the process
+        # TODO: Figure out the process
         for ratio in range(int(min_ratio), int(max_ratio) + 1, step):
             min_sizes.append(int(self.input_size * ratio / 100))
             max_sizes.append(int(self.input_size * (ratio + step) / 100))
@@ -466,3 +466,55 @@ class SSDAnchorGenerator(AnchorGenerator):
         repr_str += f'{indent_str}basesize_ratio_range='
         repr_str += f'{self.basesize_ratio_range})'
         return repr_str
+
+
+@ANCHORE_GENERATORS.register_module()
+class YOLOAnchorGenerator(object):
+
+    def __init__(self,
+                 strides=[8, 16, 32],
+                 anchors=[[12, 16], [19, 36], [40, 28], [36, 75], [76, 55], [72, 146], [142, 110], [192, 243],
+                          [459, 401]],
+                 device=None):
+        self.strides = strides
+        self.anchors = anchors
+        self.device = device
+        self.num_level = len(strides)
+        self.anchor_masks = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+
+    def grid_anchors(self, featmap_sizes, img_metas, device='cuda'):
+        """
+        Generate yolo format anchors.
+        Args:
+            featmap_sizes:
+
+        Returns:
+
+        """
+        self.batch_size = len(img_metas)
+        self.device = device
+        self.masked_anchors, self.grid_x, self.grid_y, self.ref_anchors, self.anchor_w, self.anchor_h = [], [], [], [], [], []
+
+        for i in range(self.num_level):
+            all_anchors_grid = [(w / self.strides[i], h / self.strides[i]) for w, h in self.anchors]
+            masked_anchors = np.array([all_anchors_grid[j] for j in self.anchor_masks[i]], dtype=np.float32)
+            ref_anchors = np.zeros((len(all_anchors_grid), 4), dtype=np.float32)
+            ref_anchors[:, 2:] = np.array(all_anchors_grid, dtype=np.float32)
+            ref_anchors = torch.from_numpy(ref_anchors)
+            # calculate pred - xywh obj cls
+            featmap_size = featmap_sizes[i]
+            grid_x = torch.arange(featmap_size, dtype=torch.float).repeat(self.batch_size, 3, featmap_size, 1).to(
+                self.device)
+            grid_y = torch.arange(featmap_size, dtype=torch.float).repeat(self.batch_size, 3, featmap_size, 1).permute(
+                0, 1, 3, 2).to(self.device)
+            anchor_w = torch.from_numpy(masked_anchors[:, 0]).repeat(self.batch_size, featmap_size, featmap_size,
+                                                                     1).permute(0, 3, 1, 2).to(self.device)
+            anchow_h = torch.from_numpy(masked_anchors[:, 1]).repeat(self.batch_size, featmap_size, featmap_size,
+                                                                     1).permute(0, 3, 1, 2).to(self.device)
+            self.masked_anchors.append(masked_anchors)
+            self.ref_anchors.append(ref_anchors)
+            self.grid_x.append(grid_x)
+            self.grid_y.append(grid_y)
+            self.anchor_w.append(anchor_w)
+            self.anchor_h.append(anchow_h)
+        return (self.masked_anchors, self.ref_anchors, self.grid_x, self.grid_y, self.anchor_w, self.anchor_h)

@@ -75,7 +75,7 @@ class ConvModule(nn.Module):
                  bias='auto',
                  conv_cfg=None,
                  norm_cfg=None,
-                 act_cfg=dict(type='relu'),
+                 act_cfg=dict(type='ReLU'),
                  inplace=True,
                  activate_last=True):
         super(ConvModule, self).__init__()
@@ -129,7 +129,7 @@ class ConvModule(nn.Module):
         # build activation layer
         if self.with_activatation:
             act_cfg_=act_cfg.copy()
-            if act_cfg_['type'] not in ['mish']:
+            if act_cfg_['type'] not in ['Mish']:
                 act_cfg_.setdefault('inplace',inplace)
             self.activate=build_act_layer(act_cfg_)
 

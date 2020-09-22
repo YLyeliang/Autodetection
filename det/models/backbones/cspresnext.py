@@ -2,9 +2,9 @@ import logging
 import math
 
 import torch.nn as nn
-from .resnet import ResNet
-from .resnet import Bottleneck as _Bottleneck
-from mtcv.cnn import build_norm_layer, build_conv_layer
+from .cspresnet import CSPResNet
+from .cspresnet import Bottleneck as _Bottleneck
+from mtcv.cnn import build_norm_layer, build_conv_layer,ConvModule
 
 from ..builder import BACKBONES
 
@@ -55,20 +55,9 @@ def make_res_layer(block,
                    conv_cfg=None,
                    norm_cfg=dict(type='BN'),
                    act_cfg=dict(type='ReLU')):
-    downsample = None
-    if stride != 1 or inplanes != planes * block.expansion:
-        downsample = nn.Sequential(
-            build_conv_layer(conv_cfg, inplanes, planes * block.expansion, kernel_size=1,
-                             stride=stride, bias=False),
-            build_norm_layer(norm_cfg, planes * block.expansion)[1],
-        )
+
 
     layers = []
-
-    layers.append(
-        block(inplanes, planes, stride=stride, dilation=dilation, downsample=downsample,
-              groups=groups, base_width=base_width, conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
-    )
     inplanes = planes * block.expansion
     for i in range(1, blocks):
         layers.append(
@@ -80,7 +69,7 @@ def make_res_layer(block,
 
 
 @BACKBONES.register_module()
-class ResNeXt(ResNet):
+class CSPResNeXt(CSPResNet):
     """ResNeXt backbone.
 
     Args:
@@ -107,7 +96,7 @@ class ResNeXt(ResNet):
     }
 
     def __init__(self, groups=1, base_width=4, **kwargs):
-        super(ResNeXt, self).__init__(**kwargs)
+        super(CSPResNeXt, self).__init__(**kwargs)
         self.groups = groups
         self.base_width = base_width
 
@@ -117,6 +106,21 @@ class ResNeXt(ResNet):
             stride = self.strides[i]  # default: (1,2,2,2)
             dilation = self.dilations[i]  # default: (1,1,1,1) norm conv. >1 then atrous.
             planes = 64 * 2 ** i
+            # csp block
+            if stride != 1 or self.inplanes != planes * self.block.expansion:
+                downsample = nn.Sequential(
+                    build_conv_layer(self.conv_cfg, self.inplanes, planes * self.block.expansion,
+                                     kernel_size=1, stride=stride, bias=False),
+                    build_norm_layer(self.norm_cfg, planes * self.block.expansion)[1]  # 0 is norm name, 1 is norm layer.
+                )
+            down_layer = self.block(self.inplanes, planes, stride, dilation, downsample, conv_cfg=self.conv_cfg,
+                                    norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
+            left_csp = ConvModule(planes * self.block.expansion, planes * self.block.expansion, kernel_size=1,
+                                  stride=1, bias=False)
+            # The concatenation has changed to sum.
+            end_csp = ConvModule(planes * self.block.expansion, planes * self.block.expansion, kernel_size=1, stride=1,
+                                 bias=False)
+            self.csp_layers.append([down_layer, left_csp, end_csp])
             res_layer = make_res_layer(
                 self.block,
                 self.inplanes,

@@ -61,7 +61,7 @@ class addTransformation():
     3、blending source image and transformed image together using blending algorithm, like weight, poisson et al.
     4、write the image and corresponding logo location into dir and txt, respectively.
     Args:
-        inputDir:
+        inputDir: background image dirs
         pngPath:
         outputDir:
         outTxtDir:
@@ -75,6 +75,7 @@ class addTransformation():
         locations:
         class_name: (str) If specify, the logoNames will be replaced by the class_name.
     """
+    CLASSES = {}
 
     def __init__(self,
                  inputDir,
