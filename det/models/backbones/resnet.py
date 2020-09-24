@@ -1,9 +1,9 @@
 import logging
 import torch.nn as nn
 from torch.nn.modules.batchnorm import _BatchNorm
-from mtcv.cnn import build_conv_layer, build_norm_layer, build_act_layer
+from mtcv.cnn import build_conv_layer, build_norm_layer, build_act_layer, DropBlock2D, ChannelAttention, \
+    SpatialAttention
 from mtcv.cnn.weight_init import kaiming_init, constant_init
-
 from mtcv.runner import load_checkpoint
 
 from ..builder import BACKBONES
@@ -231,6 +231,8 @@ class ResNet(nn.Module):
                  norm_cfg=dict(type='BN', requires_grad=True),
                  act_cfg=dict(type='ReLU'),
                  norm_eval=True,
+                 attention=False,
+                 drop_block=False,
                  zero_init_residual=True):
         super(ResNet, self).__init__()
         if depth not in self.arch_settings:
@@ -248,12 +250,23 @@ class ResNet(nn.Module):
         self.norm_cfg = norm_cfg
         self.act_cfg = act_cfg
         self.norm_eval = norm_eval
+        self.attention = attention
+        self.drop_block = drop_block
         self.zero_init_residual = zero_init_residual
         self.block, stage_blocks = self.arch_settings[depth]
         self.stage_blocks = stage_blocks[:num_stages]
         self.inplanes = 64
 
         self._make_stem_layer()
+
+        if self.attention:
+            self.attention_stages = (2, 3)
+            self.channel_attention = nn.ModuleList()
+            self.spatial_attention = nn.ModuleList()
+
+        if drop_block:
+            self.drop_stages = (2, 3)
+            self.dropblock = DropBlock2D(0.1, block_size=7)
 
         self.res_layers = []
         for i, num_blocks in enumerate(self.stage_blocks):
@@ -271,6 +284,11 @@ class ResNet(nn.Module):
                 norm_cfg=norm_cfg,
                 act_cfg=act_cfg)
             self.inplanes = planes * self.block.expansion
+
+            if self.attention and i in self.attention_stages:
+                self.channel_attention.append(ChannelAttention(self.inplanes))
+                self.spatial_attention.append(SpatialAttention())
+
             layer_name = 'layer{}'.format(i + 1)
             self.add_module(layer_name, res_layer)
             self.res_layers.append(layer_name)
@@ -343,6 +361,13 @@ class ResNet(nn.Module):
             res_layer = getattr(self, layer_name)
 
             x = res_layer(x)
+
+            if self.attention and i in self.attention_stages:
+                x = self.channel_attention[self.attention_stages.index(i)](x) * x
+                x = self.spatial_attention[self.attention_stages.index(i)](x) * x
+
+            if self.drop_block and i in self.drop_stages:
+                x = self.dropblock(x)
 
             if i in self.out_indices:
                 outs.append(x)

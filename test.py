@@ -4,7 +4,7 @@ from det.models.backbones.resnext import ResNeXt
 from det.models.backbones.cspresnet import CSPResNet
 from det.models.necks.pafpn import PAFPN
 from det.models.builder import build_backbone
-
+from efficientnet_pytorch import EfficientNet
 # import numpy as np
 # lr=0.001
 # a=np.linspace(lr/20,lr,20).tolist()

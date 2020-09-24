@@ -261,17 +261,17 @@ class logoEffect(object):
         """
         assert direction in ['horizontal', 'vertical']
         src = np.asarray(src)
-        if direction == 'horizontal':
+        if direction == 'vertical':
             flip = np.flip(src, axis=1)
             src = Image.fromarray(flip)
-            return src, np.flip(np.array(point_list), axis=1).tolist()
+            return src, point_list
         else:
             flip = np.flip(src, axis=0)
             src = Image.fromarray(flip)
-            return src, np.flip(np.array(point_list), axis=0).tolist()
+            return src, point_list
 
     @staticmethod
-    def Randomrotate(src, point_list=None, border_value=(0,0,0,0), auto_bound=True):
+    def Randomrotate(src, point_list=None, border_value=(0, 0, 0, 0), auto_bound=True):
         """
         Perform random rotate of image.
         Args:
@@ -284,9 +284,10 @@ class logoEffect(object):
         # TODO: To add point_list calculation and debug.
         src = cv2.cvtColor(np.asarray(src), cv2.COLOR_RGBA2BGRA)
         h, w = src.shape[:2]
-        angle = np.random.randint(-30, 30)
+        angle = np.random.randint(-90, 90)
         center = ((w - 1) * 0.5, (h - 1) * 0.5)
         matrix = cv2.getRotationMatrix2D(center, -angle, scale=1.0)
+        dst_points = point_list.copy()
         if auto_bound:
             cos = np.abs(matrix[0, 0])
             sin = np.abs(matrix[0, 1])
@@ -296,9 +297,9 @@ class logoEffect(object):
             matrix[1, 2] += (new_h - h) * 0.5
             w = int(np.round(new_w))
             h = int(np.round(new_h))
+            dst_points = [[0, 0], [w, 0], [0, h], [w, h]]
         rotated = cv2.warpAffine(src, matrix, (w, h), borderValue=border_value)
-
-
+        return Image.fromarray(cv2.cvtColor(rotated, cv2.COLOR_BGRA2RGBA)), dst_points
 
 
 def piecewiseAffineTransv2(image, point_list, debug=False):
