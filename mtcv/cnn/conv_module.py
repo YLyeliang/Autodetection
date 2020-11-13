@@ -3,42 +3,9 @@ import warnings
 import torch.nn as nn
 from .weight_init import kaiming_init, constant_init
 
-from .conv_ws import ConvWS2d
+from .conv import build_conv_layer
 from .norm import build_norm_layer
 from .activation import build_act_layer
-
-conv_cfg = {
-    'Conv': nn.Conv2d,
-    'ConvWS': ConvWS2d,
-}
-# nn.Conv2d(in_channels=,out_channels=,kernel_size=,stride=,padding=,dilation=,groups=,bias=,padding_mode=,)
-
-def build_conv_layer(cfg, *args, **kwargs):
-    """ Build convolution layer
-
-    Args:
-        cfg (None or dict): cfg should contain:
-            type (str): identify conv layer type.
-            layer args: args needed to instantiate a conv layer.
-
-    Returns:
-        layer (nn.Module): created conv layer
-    """
-    if cfg is None:
-        cfg_ = dict(type='Conv')
-    else:
-        assert isinstance(cfg, dict) and 'type' in cfg
-        cfg_ = cfg.copy()
-
-    layer_type = cfg_.pop('type')
-    if layer_type not in conv_cfg:
-        raise KeyError('Unrecognized norm type {}'.format(layer_type))
-    else:
-        conv_layer = conv_cfg[layer_type]
-
-    layer = conv_layer(*args, **kwargs, **cfg_)
-
-    return layer
 
 
 class ConvModule(nn.Module):
@@ -81,7 +48,7 @@ class ConvModule(nn.Module):
         super(ConvModule, self).__init__()
         assert conv_cfg is None or isinstance(conv_cfg, dict)
         assert norm_cfg is None or isinstance(norm_cfg, dict)
-        assert act_cfg is None or isinstance(act_cfg,dict)
+        assert act_cfg is None or isinstance(act_cfg, dict)
         self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
         self.act_cfg = act_cfg
@@ -128,10 +95,10 @@ class ConvModule(nn.Module):
 
         # build activation layer
         if self.with_activatation:
-            act_cfg_=act_cfg.copy()
-            if act_cfg_['type'] not in ['Mish']:
-                act_cfg_.setdefault('inplace',inplace)
-            self.activate=build_act_layer(act_cfg_)
+            act_cfg_ = act_cfg.copy()
+            if act_cfg_['type'] not in ['Mish']:  # Mish has no inplace argument.
+                act_cfg_.setdefault('inplace', inplace)
+            self.activate = build_act_layer(act_cfg_)
 
         # Use msra init by default
         self.init_weights()
@@ -141,14 +108,14 @@ class ConvModule(nn.Module):
         return getattr(self, self.norm_name)
 
     def init_weights(self):
-        if not hasattr(self.conv,'init_weights'):
-            if self.with_activatation and self.act_cfg['type']=='leaky':
-                nonlinearity='leaky_relu'
-                a=self.act_cfg.get('negative_slope',0.01)
+        if not hasattr(self.conv, 'init_weights'):
+            if self.with_activatation and self.act_cfg['type'] == 'leaky':
+                nonlinearity = 'leaky_relu'
+                a = self.act_cfg.get('negative_slope', 0.01)
             else:
-                nonlinearity='relu'
-                a=0
-            kaiming_init(self.conv, a=a,nonlinearity=nonlinearity)
+                nonlinearity = 'relu'
+                a = 0
+            kaiming_init(self.conv, a=a, nonlinearity=nonlinearity)
         if self.with_norm:
             constant_init(self.norm, 1, bias=0)
 

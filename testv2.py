@@ -55,5 +55,19 @@ from torchvision import models
 # print('load success')
 
 import os
-root,dirs,files =os.walk('.').__next__()
-debug=1
+
+class A:
+    def __init__(self,a=1):
+        self.a=a
+
+    def sum(self,num):
+        num+=1
+        print(num)
+
+def hehe(self,b):
+    self.sum(self,b)
+
+a=A
+hehe(a,3)
+import cv2
+cv2.rectangle()

@@ -26,15 +26,16 @@ def framework_chart():
     dot.node('f', '批量生成api')
     dot.node('g', '训练格式转换')
     dot.node('p', 'dataset')
+    dot.node('q','mosaic,grid, et al.')
     dot.node('h', 'backbone')
     dot.node('i', 'neck')
     dot.node('j', 'head')
     dot.node('k', 'detector')
     dot.node('l', 'res,csp')
     dot.node('m', 'fpn,panet')
-    dot.node('n', 'yolo,retina')
-    dot.node('o', 'yolo,retina')
-    dot.edges(['ab', 'ac', 'bd', 'be', 'bf', 'bg', 'cp', 'ch', 'ci', 'cj', 'ck', 'hl', 'im', 'jn', 'ko'])
+    dot.node('n', 'refinedet,retina')
+    dot.node('o', 'refinedet,retina')
+    dot.edges(['ab', 'ac', 'bd', 'be', 'bf', 'bg', 'cp', 'ch', 'ci', 'cj', 'ck', 'hl', 'im', 'jn', 'ko','pq'])
     dot.view()
 
 
@@ -53,5 +54,5 @@ def autotrain_flow():
     dot.view()
 
 
-# framework_chart()
-autotrain_flow()
+framework_chart()
+# autotrain_flow()

@@ -89,7 +89,7 @@ class TBDataset(data.Dataset):
         self.pre_pipeline(results)
         return self.pipeline(results)
 
-    def parse_train_image(self, idx):
+    def prepare_train_img(self, idx):
         """Get training data and annotations after pipeline.
 
         Args:

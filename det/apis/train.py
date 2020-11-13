@@ -7,7 +7,7 @@ from mtcv.parallel import MMDistributedDataParallel, MMDataParallel
 from mtcv.runner import (HOOKS, DistSamplerSeedHook, EpochBasedRunner, OptimizerHook, build_optimizer)
 from mtcv.utils import build_from_cfg
 
-# from det.core import DistEvalHook, EvalHook
+from det.core import DistEvalHook, EvalHook
 from det.datasets import build_dataloader, build_dataset
 from det.utils import get_root_logger
 
@@ -79,7 +79,12 @@ def train_detector(model,
     runner.timestamp = timestamp
 
     # TODO: fp16 setting
-    if distributed and 'type' not in cfg.optimizer_config:
+    # fp16 setting
+    fp16_cfg = cfg.get('fp16', None)
+    if fp16_cfg is not None:
+        optimizer_config = Fp16OptimizerHook(
+            **cfg.optimizer_config, **fp16_cfg, distributed=distributed)
+    elif distributed and 'type' not in cfg.optimizer_config:
         optimizer_config = OptimizerHook(**cfg.optimizer_config)
     else:
         optimizer_config = cfg.optimizer_config
@@ -92,17 +97,17 @@ def train_detector(model,
 
     # register eval hooks
     # TODO: waiting for update
-    # if validate:
-    #     val_dataset = build_dataset(cfg.data.val, dict(test_mode=True))
-    #     val_dataloader = build_dataloader(
-    #         val_dataset,
-    #         sampler_per_gpu=1,
-    #         workers_per_gpu=cfg.data.workers_per_gpu,
-    #         dist=distributed,
-    #         shuffle=False)
-    #     eval_cfg = cfg.get('evaluation', {})
-    #     eval_hook = DistEvalHook if distributed else EvalHook
-    #     runner.register_hook(eval_hook(val_dataloader, **eval_cfg))
+    if validate:
+        val_dataset = build_dataset(cfg.data.val, dict(test_mode=True))
+        val_dataloader = build_dataloader(
+            val_dataset,
+            sampler_per_gpu=1,
+            workers_per_gpu=cfg.data.workers_per_gpu,
+            dist=distributed,
+            shuffle=False)
+        eval_cfg = cfg.get('evaluation', {})
+        eval_hook = DistEvalHook if distributed else EvalHook
+        runner.register_hook(eval_hook(val_dataloader, **eval_cfg))
 
     # user-defined hooks
     if cfg.get('custom_hooks', None):

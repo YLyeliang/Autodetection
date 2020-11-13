@@ -1,5 +1,6 @@
 import itertools
 from collections import abc
+from time import time
 
 
 def is_str(x):
@@ -86,3 +87,38 @@ def concat_list(in_list):
         list: The concatenated flat list.
     """
     return list(itertools.chain(*in_list))
+
+
+class tictok(object):
+    """
+    A time count function, that used to count time flow.
+
+    """
+    def __init__(self, format='sec'):
+        self.info = ''
+        self.format = format
+        self.flush_single()
+        self.flush_total()
+
+    def flush_single(self):
+        self.start = 0
+        self.end = 0
+
+    def flush_total(self):
+        self._total = 0
+
+
+    def tic(self):
+        self.start = time.time()
+
+    def tok(self):
+        self.end = time.time()
+        self._total += self.end - self.start
+
+    @property
+    def click(self):
+        return self.end - self.start
+
+    @property
+    def total(self):
+        return self._total

@@ -15,7 +15,7 @@ class OptimizerHook(Hook):
     def clip_grads(self, params):
         params = list(filter(lambda p: p.requires_grad and p.grad is not None, params))
         if len(params) > 0:
-            return clip_grad.clip_grad_norm_(params, **self.grag_clip)
+            return clip_grad.clip_grad_norm_(params, **self.grad_clip)
 
     def after_train_iter(self, runner):
         runner.optimizer.zero_grad()

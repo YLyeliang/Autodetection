@@ -52,7 +52,7 @@ class EpochBasedRunner(BaseRunner):
             self.call_hook('before_val_iter')
             with torch.no_grad():
                 if self.batch_processor is None:
-                    outputs = self.model.val_step()
+                    outputs = self.model.val_step(data_batch, self.optimizer, **kwargs)
                 else:
                     outputs = self.batch_processor(self.model, data_batch, train_mode=False, **kwargs)
             if not isinstance(outputs, dict):

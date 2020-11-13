@@ -1,4 +1,6 @@
 import logging
+
+import torch
 import torch.nn as nn
 from torch.nn.modules.batchnorm import _BatchNorm
 from mtcv.cnn import build_conv_layer, build_norm_layer, build_act_layer, ConvModule
@@ -244,7 +246,7 @@ class CSPResNet(nn.Module):
         self._make_stem_layer()
 
         self.res_layers = []
-        self.csp_layers = []
+        self.csp_layers = nn.ModuleList()
         for i, num_blocks in enumerate(self.stage_blocks):
 
             stride = strides[i]
@@ -263,9 +265,10 @@ class CSPResNet(nn.Module):
             left_csp = ConvModule(planes * self.block.expansion, planes * self.block.expansion, kernel_size=1,
                                   stride=1, bias=False)
             # The concatenation has changed to sum.
-            end_csp = ConvModule(planes * self.block.expansion, planes * self.block.expansion, kernel_size=1, stride=1,
+            end_csp = ConvModule(planes * self.block.expansion * 2, planes * self.block.expansion, kernel_size=1,
+                                 stride=1,
                                  bias=False)
-            self.csp_layers.append([down_layer, left_csp, end_csp])
+            self.csp_layers.append(nn.ModuleList([down_layer, left_csp, end_csp]))
 
             # res layer
             res_layer = make_res_layer(
@@ -353,8 +356,8 @@ class CSPResNet(nn.Module):
 
             x = res_layer(x)  # right res part
 
-            x += left  # concate has changed to sum
-            x = self.csp_layers[i][2](x)    # transition
+            x = torch.cat([left,x],dim=1)
+            x = self.csp_layers[i][2](x)  # transition
 
             if i in self.out_indices:
                 outs.append(x)

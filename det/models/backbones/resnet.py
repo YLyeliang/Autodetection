@@ -52,7 +52,7 @@ class BasicBlock(nn.Module):
 
         out = self.conv1(x)
         out = self.norm1(out)
-        out = self.relu(out)
+        out = self.act(out)
 
         out = self.conv2(out)
         out = self.norm2(out)
