@@ -8,6 +8,7 @@ from skimage.transform import PiecewiseAffineTransform, warp
 
 blend_mode = {0: "naive", 1: "weight", 2: "poisson", 3: "multiply"}
 
+
 def weight_paste(pixSrc, pixPng, src_id, logo_id):
     """
     a weight blend method, that corresponding parts in logo and source will be blend
@@ -66,6 +67,12 @@ def poisson_blend(pixSrc, pixPng, src_id, logo_id, x, y):
 
 
 def multiply(src, logo, src_id, logo_id):
+    """
+    正片叠底
+    C = A * B, in the implementation, the value range of A & B are [0,1], while in opencv, the range are [0,255],
+    so it be came C = A / 255 * B / 255 * 255 = A * B /255
+
+    """
     r, g, b = src[:, :, 0], src[:, :, 1], src[:, :, 2]
     l_r, l_g, l_b, l_a = logo[:, :, 0], logo[:, :, 1], logo[:, :, 2], logo[:, :, 3]
     rgb = [r, g, b]
@@ -82,16 +89,49 @@ def multiply(src, logo, src_id, logo_id):
     return src
 
 
+def hardLight(srcA, logo):
+    """
+    Implementation of Photoshop hard light blend mode. principle:
+    It execute the `multiply` or `screen` mode according to the value of image.
+    A<=0.5: C = 2 * A * B            multiply
+    A>0.5: C = 1 - 2 * (1 - A) * (1 - B)    screen
+
+    Args:
+        srcA: image A with gray mode, the silk image.
+        srcB: image B with rgba mode, in most case, its RGBA.
+    Returns:
+    """
+    srcA = srcA.astype(np.float32)
+    srcA /= 255
+    srcB = logo[:, :, :3]
+    srcB = srcB.astype(np.float32)
+    srcB /= 255
+    hB, wB = srcB.shape[:2]
+    resizeA = cv2.resize(srcA, (wB, hB))
+    bigger_idx = np.where(resizeA > 0.5)
+    smaller_idx = np.where(resizeA <= 0.5)
+    resizeA = resizeA[..., np.newaxis]
+    srcB[smaller_idx] = 2 * resizeA[smaller_idx] * srcB[smaller_idx]
+    srcB[bigger_idx] = 1 - (1 - 2 * (resizeA[bigger_idx] - 0.5)) * (1 - srcB[bigger_idx])
+
+    srcA *= 255
+    srcB *= 255
+    srcB = srcB.astype(np.uint8)
+    blend_index = np.where(logo[:, :, 3] > 15)
+    logo[blend_index, :3] = srcB[blend_index]
+    return srcB
+
+
 def channel_blend(pixSrc, pixPng, srcH, srcW, x, y, mode='weight', color_match=False):
     """
     Blend the source image with logo image at corresponding locations.
     Args:
-        pixSrc: (ndarray)
-        pixPng: (ndarray)
-        srcH:
-        srcW:
-        x:
-        y:
+        pixSrc: (numpy array) source image in RGBA format.
+        pixPng: (numpy array) logo image in RGBA format.
+        srcH: height of source image.
+        srcW: width of source image.
+        x: the top-left coordinates of logo in the source image.
+        y: the top-left coordinates of logo in the source image.
 
     Returns:
 

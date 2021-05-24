@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from skimage.transform import PiecewiseAffineTransform, warp
 from PIL import Image
 import cv2
+from .img_blend import hardLight
 
 
 class logoEffect(object):
@@ -38,8 +39,8 @@ class logoEffect(object):
         src_rows, src_cols = np.meshgrid(src_rows, src_cols)
         src = np.dstack([src_cols.flat, src_rows.flat])[0]  # (x,y)
 
-        # add sinusoidal oscillation to row coordinates
-        factor = np.random.randint(h // 15, h // 10)
+        # add sinusoidal oscillation to row coordinates. Ensure low < high
+        factor = np.random.randint(h // 15, max(h // 10, (h // 15) + 1))
 
         # rows +[0,3*pi], which decides the wave.
         dst_rows = src[:, 1] - np.sin(np.linspace(0, wave_num * np.pi, src.shape[0])) * factor
@@ -300,6 +301,12 @@ class logoEffect(object):
             dst_points = [[0, 0], [w, 0], [0, h], [w, h]]
         rotated = cv2.warpAffine(src, matrix, (w, h), borderValue=border_value)
         return Image.fromarray(cv2.cvtColor(rotated, cv2.COLOR_BGRA2RGBA)), dst_points
+
+    @staticmethod
+    def flagTexture(flag, texture):
+        flag = np.asarray(flag)
+        dst = hardLight(texture, flag)
+        return Image.fromarray(dst)
 
 
 def piecewiseAffineTransv2(image, point_list, debug=False):
